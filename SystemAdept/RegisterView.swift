@@ -5,8 +5,8 @@
 //  Created by Thomas Akin on 3/30/25.
 //
 
-
 import SwiftUI
+import FirebaseAuth
 
 struct RegisterView: View {
     @State private var email = ""
@@ -20,25 +20,25 @@ struct RegisterView: View {
             VStack(spacing: 20) {
                 // Email input field
                 TextField("Email", text: $email)
-                    .autocapitalization(.none)
+                    .textInputAutocapitalization(.never)
                     .keyboardType(.emailAddress)
                     .padding()
-                    .background(Color(UIColor.secondarySystemBackground))
+                    .background(Color.gray.opacity(0.2))
                     .cornerRadius(8)
                 
                 // Password input field
                 SecureField("Password", text: $password)
                     .padding()
-                    .background(Color(UIColor.secondarySystemBackground))
+                    .background(Color.gray.opacity(0.2))
                     .cornerRadius(8)
                 
                 // Confirm password input field
                 SecureField("Confirm Password", text: $confirmPassword)
                     .padding()
-                    .background(Color(UIColor.secondarySystemBackground))
+                    .background(Color.gray.opacity(0.2))
                     .cornerRadius(8)
                 
-                // Display error messages if any.
+                // Error message display
                 if !errorMessage.isEmpty {
                     Text(errorMessage)
                         .foregroundColor(.red)
@@ -58,7 +58,6 @@ struct RegisterView: View {
                         .cornerRadius(8)
                 }
                 
-                // NavigationLink to the main content after successful registration.
                 NavigationLink(destination: ContentView(), isActive: $isRegistered) {
                     EmptyView()
                 }
@@ -68,7 +67,6 @@ struct RegisterView: View {
         }
     }
     
-    // Validate input and call AuthService to register the user.
     private func register() {
         guard !email.isEmpty, !password.isEmpty, !confirmPassword.isEmpty else {
             errorMessage = "Please fill in all fields."
@@ -80,16 +78,23 @@ struct RegisterView: View {
             return
         }
         
-        AuthService.shared.registerUser(email: email, password: password) { result in
-            switch result {
-            case .success(let authResult):
-                print("User registered: \(authResult.user.uid)")
-                DispatchQueue.main.async {
-                    self.isRegistered = true
-                }
-            case .failure(let error):
-                DispatchQueue.main.async {
-                    self.errorMessage = error.localizedDescription
+        Auth.auth().createUser(withEmail: email, password: password) { authResult, error in
+            if let error = error {
+                errorMessage = error.localizedDescription
+                return
+            }
+            
+            if let user = authResult?.user {
+                // Ensure a default profile exists for the new user.
+                UserProfileService.shared.ensureUserProfile(for: user.uid, email: user.email ?? "") { profile, error in
+                    if let error = error {
+                        errorMessage = error.localizedDescription
+                    } else {
+                        print("User profile ensured for \(user.uid)")
+                        DispatchQueue.main.async {
+                            self.isRegistered = true
+                        }
+                    }
                 }
             }
         }

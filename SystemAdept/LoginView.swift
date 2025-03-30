@@ -5,9 +5,8 @@
 //  Created by Thomas Akin on 3/30/25.
 //
 
-
 import SwiftUI
-import UIKit // Needed for UIKeyboardType
+import FirebaseAuth
 
 struct LoginView: View {
     @State private var email = ""
@@ -18,21 +17,18 @@ struct LoginView: View {
     var body: some View {
         NavigationView {
             VStack(spacing: 20) {
-                // Email input field
                 TextField("Email", text: $email)
-                    .textInputAutocapitalization(TextInputAutocapitalization.never) // Fully-qualified enum value
-                    .keyboardType(UIKeyboardType.emailAddress) // Fully-qualified enum value from UIKit
+                    .textInputAutocapitalization(.never)
+                    .keyboardType(.emailAddress)
                     .padding()
                     .background(Color.gray.opacity(0.2))
                     .cornerRadius(8)
                 
-                // Password input field
                 SecureField("Password", text: $password)
                     .padding()
                     .background(Color.gray.opacity(0.2))
                     .cornerRadius(8)
                 
-                // Display error messages if any.
                 if !errorMessage.isEmpty {
                     Text(errorMessage)
                         .foregroundColor(.red)
@@ -40,19 +36,15 @@ struct LoginView: View {
                         .padding(.horizontal)
                 }
                 
-                // Login button
-                Button(action: {
+                Button("Login") {
                     login()
-                }) {
-                    Text("Login")
-                        .foregroundColor(.white)
-                        .padding()
-                        .frame(maxWidth: .infinity)
-                        .background(Color.green)
-                        .cornerRadius(8)
                 }
+                .foregroundColor(.white)
+                .padding()
+                .frame(maxWidth: .infinity)
+                .background(Color.green)
+                .cornerRadius(8)
                 
-                // NavigationLink to the main content after successful login.
                 NavigationLink(destination: ContentView(), isActive: $isLoggedIn) {
                     EmptyView()
                 }
@@ -62,23 +54,28 @@ struct LoginView: View {
         }
     }
     
-    // Validate input and call AuthService to log in the user.
     private func login() {
         guard !email.isEmpty, !password.isEmpty else {
             errorMessage = "Please enter email and password."
             return
         }
         
-        AuthService.shared.loginUser(email: email, password: password) { result in
-            switch result {
-            case .success(let authResult):
-                print("User logged in: \(authResult.user.uid)")
-                DispatchQueue.main.async {
-                    self.isLoggedIn = true
-                }
-            case .failure(let error):
-                DispatchQueue.main.async {
-                    self.errorMessage = error.localizedDescription
+        Auth.auth().signIn(withEmail: email, password: password) { authResult, error in
+            if let error = error {
+                errorMessage = error.localizedDescription
+                return
+            }
+            if let user = authResult?.user {
+                // Ensure a profile exists for this existing user.
+                UserProfileService.shared.ensureUserProfile(for: user.uid, email: user.email ?? "") { profile, error in
+                    if let error = error {
+                        errorMessage = error.localizedDescription
+                    } else {
+                        print("User profile ensured for \(user.uid)")
+                        DispatchQueue.main.async {
+                            self.isLoggedIn = true
+                        }
+                    }
                 }
             }
         }
@@ -87,6 +84,8 @@ struct LoginView: View {
 
 struct LoginView_Previews: PreviewProvider {
     static var previews: some View {
-        LoginView()
+        NavigationStack {
+            LoginView()
+        }
     }
 }

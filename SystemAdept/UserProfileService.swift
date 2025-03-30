@@ -5,7 +5,6 @@
 //  Created by Thomas Akin on 3/30/25.
 //
 
-
 import Foundation
 import FirebaseFirestore
 import FirebaseAuth
@@ -49,7 +48,45 @@ class UserProfileService {
                     completion(nil, error)
                 }
             } else {
-                completion(nil, NSError(domain: "No data", code: 0, userInfo: nil))
+                completion(nil, nil)
+            }
+        }
+    }
+    
+    // Ensure a user profile exists; if not, create a default one.
+    func ensureUserProfile(for uid: String, email: String, completion: @escaping (UserProfile?, Error?) -> Void) {
+        fetchUserProfile(for: uid) { profile, error in
+            if let error = error {
+                completion(nil, error)
+                return
+            }
+            if let profile = profile {
+                // Profile already exists.
+                completion(profile, nil)
+            } else {
+                // No profile exists, so create a default profile.
+                let defaultName = email.components(separatedBy: "@").first ?? email
+                let defaultProfile = UserProfile(
+                    id: uid,
+                    email: email,
+                    name: defaultName,
+                    aura: 0,
+                    skillPoints: "--",
+                    strength: StrengthMetrics(upperBody: 0, core: 0, lowerBody: 0),
+                    agility: AgilityMetrics(flexibility: 0, speed: 0, balance: 0),
+                    stamina: 0,
+                    power: 0,
+                    focus: 0,
+                    discipline: 0,
+                    initiative: 0
+                )
+                self.createUserProfile(for: defaultProfile) { error in
+                    if let error = error {
+                        completion(nil, error)
+                    } else {
+                        completion(defaultProfile, nil)
+                    }
+                }
             }
         }
     }
