@@ -48,7 +48,7 @@ struct ContentView: View {
                 .padding()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color.white)
-                .navigationTitle("Welcome")
+                .navigationTitle("System Adept")
             }
         }
         .onAppear {
