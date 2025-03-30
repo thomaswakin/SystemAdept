@@ -12,12 +12,20 @@ struct ContentView: View {
     @State private var isAuthenticated = AuthService.shared.isUserLoggedIn()
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             if isAuthenticated {
-                // Main content for authenticated users.
+                // Main content for authenticated users
                 VStack(spacing: 20) {
                     Text("Welcome to System Adept!")
                         .font(.largeTitle)
+                        .foregroundColor(.black)
+                    
+                    NavigationLink("Edit Profile", destination: EditProfileView())
+                        .padding()
+                        .background(Color.blue)
+                        .foregroundColor(.white)
+                        .cornerRadius(8)
+                    
                     Button("Sign Out") {
                         signOut()
                     }
@@ -26,38 +34,28 @@ struct ContentView: View {
                     .background(Color.red)
                     .cornerRadius(8)
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color.white)
                 .navigationTitle("Home")
             } else {
-                // Navigation options for users who are not signed in.
+                // Display login/register options (assume you have these views)
                 VStack(spacing: 20) {
-                    NavigationLink(destination: LoginView()) {
-                        Text("Login")
-                            .foregroundColor(.white)
-                            .padding()
-                            .frame(maxWidth: .infinity)
-                            .background(Color.green)
-                            .cornerRadius(8)
-                    }
-                    NavigationLink(destination: RegisterView()) {
-                        Text("Register")
-                            .foregroundColor(.white)
-                            .padding()
-                            .frame(maxWidth: .infinity)
-                            .background(Color.blue)
-                            .cornerRadius(8)
-                    }
+                    NavigationLink("Login", destination: LoginView())
+                        .buttonStyle(.borderedProminent)
+                    NavigationLink("Register", destination: RegisterView())
+                        .buttonStyle(.borderedProminent)
                 }
                 .padding()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color.white)
                 .navigationTitle("Welcome")
             }
         }
         .onAppear {
-            // Check the user's authentication status when the view appears.
             self.isAuthenticated = AuthService.shared.isUserLoggedIn()
         }
     }
     
-    // Sign out the current user.
     private func signOut() {
         do {
             try AuthService.shared.signOut()
