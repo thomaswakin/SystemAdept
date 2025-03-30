@@ -1,4 +1,13 @@
+//
+//  LoginView.swift
+//  SystemAdept
+//
+//  Created by Thomas Akin on 3/30/25.
+//
+
+
 import SwiftUI
+import UIKit // Needed for UIKeyboardType
 
 struct LoginView: View {
     @State private var email = ""
@@ -11,16 +20,16 @@ struct LoginView: View {
             VStack(spacing: 20) {
                 // Email input field
                 TextField("Email", text: $email)
-                    .autocapitalization(.none)
-                    .keyboardType(.emailAddress)
+                    .textInputAutocapitalization(TextInputAutocapitalization.never) // Fully-qualified enum value
+                    .keyboardType(UIKeyboardType.emailAddress) // Fully-qualified enum value from UIKit
                     .padding()
-                    .background(Color(UIColor.secondarySystemBackground))
+                    .background(Color.gray.opacity(0.2))
                     .cornerRadius(8)
                 
                 // Password input field
                 SecureField("Password", text: $password)
                     .padding()
-                    .background(Color(UIColor.secondarySystemBackground))
+                    .background(Color.gray.opacity(0.2))
                     .cornerRadius(8)
                 
                 // Display error messages if any.

@@ -1,3 +1,11 @@
+//
+//  AuthService.swift
+//  SystemAdept
+//
+//  Created by Thomas Akin on 3/30/25.
+//
+
+
 import Foundation
 import FirebaseAuth
 
