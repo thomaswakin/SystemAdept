@@ -9,15 +9,12 @@ import SwiftUI
 import FirebaseCore
 import FirebaseFirestore
 import FirebaseAuth
-import FirebaseAuthUI
+
 
 @main
 struct SystemAdeptApp: App {
     init() {
         FirebaseApp.configure()
-        let authUI = FUIAuth.defaultAuthUI()
-        // You need to adopt a FUIAuthDelegate protocol to receive callback
-        authUI.delegate = self
     }
     
     var body: some Scene {

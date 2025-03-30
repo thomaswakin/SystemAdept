@@ -12,6 +12,9 @@
 		EF7BAD022D987BCC00532E98 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = EF7BAD012D987BCC00532E98 /* FirebaseFirestore */; };
 		EF7BAD0D2D9898AD00532E98 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = EF7BAD0C2D9898AD00532E98 /* GoogleSignIn */; };
 		EF7BAD0F2D9898AD00532E98 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = EF7BAD0E2D9898AD00532E98 /* GoogleSignInSwift */; };
+		EF7BAD112D9920AF00532E98 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = EF7BAD102D9920AF00532E98 /* FirebaseCore */; };
+		EF7BAD132D9920AF00532E98 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = EF7BAD122D9920AF00532E98 /* FirebaseStorage */; };
+		EF7BAD172D9923BA00532E98 /* FirebaseAuthCombine-Community in Frameworks */ = {isa = PBXBuildFile; productRef = EF7BAD162D9923BA00532E98 /* FirebaseAuthCombine-Community */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -77,7 +80,10 @@
 				EF7BACFC2D9877A800532E98 /* FirebaseAuth in Frameworks */,
 				EF7BAD0D2D9898AD00532E98 /* GoogleSignIn in Frameworks */,
 				EF7BAD002D98798900532E98 /* FirebaseAnalyticsWithoutAdIdSupport in Frameworks */,
+				EF7BAD132D9920AF00532E98 /* FirebaseStorage in Frameworks */,
+				EF7BAD112D9920AF00532E98 /* FirebaseCore in Frameworks */,
 				EF7BAD022D987BCC00532E98 /* FirebaseFirestore in Frameworks */,
+				EF7BAD172D9923BA00532E98 /* FirebaseAuthCombine-Community in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -143,6 +149,9 @@
 				EF7BAD012D987BCC00532E98 /* FirebaseFirestore */,
 				EF7BAD0C2D9898AD00532E98 /* GoogleSignIn */,
 				EF7BAD0E2D9898AD00532E98 /* GoogleSignInSwift */,
+				EF7BAD102D9920AF00532E98 /* FirebaseCore */,
+				EF7BAD122D9920AF00532E98 /* FirebaseStorage */,
+				EF7BAD162D9923BA00532E98 /* FirebaseAuthCombine-Community */,
 			);
 			productName = SystemAdept;
 			productReference = EF7BACCC2D986F3700532E98 /* SystemAdept.app */;
@@ -360,6 +369,7 @@
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
+				"OTHER_LDFLAGS[arch=*]" = "-ObjC";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -414,6 +424,7 @@
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
+				"OTHER_LDFLAGS[arch=*]" = "-ObjC";
 				SWIFT_COMPILATION_MODE = wholemodule;
 			};
 			name = Release;
@@ -673,6 +684,21 @@
 			isa = XCSwiftPackageProductDependency;
 			package = EF7BAD0B2D9898AD00532E98 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
 			productName = GoogleSignInSwift;
+		};
+		EF7BAD102D9920AF00532E98 /* FirebaseCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = EF7BACFA2D9877A800532E98 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCore;
+		};
+		EF7BAD122D9920AF00532E98 /* FirebaseStorage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = EF7BACFA2D9877A800532E98 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseStorage;
+		};
+		EF7BAD162D9923BA00532E98 /* FirebaseAuthCombine-Community */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = EF7BACFA2D9877A800532E98 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = "FirebaseAuthCombine-Community";
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
