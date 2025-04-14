@@ -10,16 +10,27 @@ import FirebaseCore
 import FirebaseFirestore
 import FirebaseAuth
 
-
 @main
 struct SystemAdeptApp: App {
-    init() {
-        FirebaseApp.configure()
-    }
-    
-    var body: some Scene {
-        WindowGroup {
-            ContentView() // Your initial view
+  // Initialize Firebase in your App’s init
+  init() {
+    FirebaseApp.configure()
+  }
+
+  @StateObject private var authVM = AuthViewModel()
+
+  var body: some Scene {
+    WindowGroup {
+      Group {
+        if authVM.isLoggedIn {
+          MainTabView()
+            .environmentObject(authVM)
+        } else {
+          AuthView()
+            .environmentObject(authVM)
         }
+      }
     }
+  }
 }
+
