@@ -5,67 +5,57 @@
 //  Created by Thomas Akin on 4/14/25.
 //
 
-
 import SwiftUI
 
 struct ActiveSystemsView: View {
-    @StateObject private var viewModel = ActiveSystemsViewModel()
+    @StateObject private var vm = ActiveSystemsViewModel()
+    @State private var path: [ActiveQuestSystem] = []
 
     var body: some View {
-        NavigationView {
+        NavigationStack(path: $path) {
             List {
-                // Show any errors
-                if let error = viewModel.errorMessage {
+                if let error = vm.errorMessage {
                     Text("Error: \(error)")
                         .foregroundColor(.red)
                 }
 
-                // One row per active quest system
-                ForEach(viewModel.activeSystems) { system in
-                    NavigationLink(destination: QuestQueueView(activeSystem: system)) {
-                        HStack {
-                            // Display the system ID (you can swap to a fetched name later)
-                            Text(system.questSystemRef.documentID)
+                ForEach(vm.activeSystems) { system in
+                    HStack {
+                        // Tapping the name pushes into QuestQueueView
+                        NavigationLink(value: system) {
+                            Text(system.questSystemName)
                                 .font(.headline)
-
-                            Spacer()
-
-                            // Current assignment status
-                            Text(system.status.rawValue.capitalized)
-                                .font(.subheadline)
-                                .foregroundColor(.gray)
-
-                            // Pause / Resume button
-                            Button(action: {
-                                viewModel.togglePause(system: system)
-                            }) {
-                                Text(system.status == .active ? "Pause" : "Resume")
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 4)
-                                    .background(Color.blue.opacity(0.2))
-                                    .cornerRadius(6)
-                            }
-                            .buttonStyle(PlainButtonStyle())
-
-                            // Stop button
-                            Button(action: {
-                                viewModel.stop(system: system)
-                            }) {
-                                Text("Stop")
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 4)
-                                    .background(Color.red.opacity(0.2))
-                                    .cornerRadius(6)
-                            }
-                            .buttonStyle(PlainButtonStyle())
                         }
-                        .padding(.vertical, 6)
+
+                        Spacer()
+
+                        // Pause / Resume
+                        Button {
+                            vm.togglePause(system: system)
+                        } label: {
+                            Text(system.status == .active ? "Pause" : "Resume")
+                        }
+                        .buttonStyle(.bordered)
+
+                        // Stop
+                        Button {
+                            vm.stop(system: system)
+                        } label: {
+                            Text("Stop")
+                        }
+                        .buttonStyle(.borderedProminent)
                     }
+                    .padding(.vertical, 4)
                 }
             }
             .navigationTitle("My Quest Systems")
+            // Map ActiveQuestSystem → QuestQueueView
+            .navigationDestination(for: ActiveQuestSystem.self) { system in
+                QuestQueueView(activeSystem: system)
+            }
+            // Reset to root whenever you come back to this tab
             .onAppear {
-                viewModel.startListening()
+                path = []
             }
         }
     }

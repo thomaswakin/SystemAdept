@@ -47,6 +47,15 @@ final class QuestQueueViewModel: ObservableObject {
                     self.errorMessage = err.localizedDescription
                     return
                 }
+                
+                // ==== DEBUG LOGGING START ====
+                let docs = snap?.documents ?? []
+                print("🔍 QuestQueue listener fired. docs.count =", docs.count)
+                for doc in docs {
+                  print("   • qpId:", doc.documentID,
+                        "data:", doc.data())
+                }
+                // ==== DEBUG LOGGING END ====
 
                 let now = Date()
                 let availables = snap?.documents.compactMap { doc in

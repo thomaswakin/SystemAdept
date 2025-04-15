@@ -8,25 +8,31 @@
 
 import SwiftUI
 
+enum Tab { case browse, systems, profile }
+
 struct MainTabView: View {
-  @EnvironmentObject var authVM: AuthViewModel
+  @State private var selected: Tab = .browse
+  @State private var systemsViewID = UUID()
 
   var body: some View {
-    TabView {
+    TabView(selection: $selected) {
       QuestSystemListView()
-        .tabItem {
-          Label("Browse", systemImage: "list.bullet")
-        }
+        .tabItem { Label("Browse", systemImage: "list.bullet") }
+        .tag(Tab.browse)
 
       ActiveSystemsView()
-        .tabItem {
-          Label("My Systems", systemImage: "checkmark.circle")
+        .id(systemsViewID)                     // ← force recreation
+        .tabItem { Label("My Systems", systemImage: "checkmark.circle") }
+        .tag(Tab.systems)
+        .onChange(of: selected) { new in
+          if new == .systems {
+            systemsViewID = UUID()             // reset when re‑selected
+          }
         }
 
       ProfileView()
-        .tabItem {
-          Label("Profile", systemImage: "person.crop.circle")
-        }
+        .tabItem { Label("Profile", systemImage: "person.crop.circle") }
+        .tag(Tab.profile)
     }
   }
 }
