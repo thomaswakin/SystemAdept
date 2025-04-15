@@ -40,37 +40,56 @@ final class ActiveSystemsViewModel: ObservableObject {
             }
             let docs = snap?.documents ?? []
             print("🔍 ActiveSystems listener fired. docs.count =", docs.count)
-            for doc in docs {
-                let status = doc.data()["status"] as? String ?? "–"
-                print("   • aqsId:", doc.documentID, "status:", status)
-            }
 
             self.activeSystems = docs.compactMap { doc in
-                do {
-                    return try doc.data(as: ActiveQuestSystem.self)
-                } catch {
-                    print("⚠️ Failed to decode AQS \(doc.documentID):", error)
+                let data = doc.data()
+                // Required fields
+                guard
+                    let qsr = data["questSystemRef"] as? DocumentReference,
+                    let statusStr = data["status"] as? String,
+                    let status = SystemAssignmentStatus(rawValue: statusStr),
+                    let ts = data["assignedAt"] as? Timestamp
+                else {
+                    print("⚠️ Missing fields in AQS \(doc.documentID)")
                     return nil
                 }
+
+                // Optional or mixed‑type fields
+                let name = data["questSystemName"] as? String ?? qsr.documentID
+                let isUserSelected: Bool = {
+                    if let b = data["isUserSelected"] as? Bool { return b }
+                    if let i = data["isUserSelected"] as? Int  { return i != 0 }
+                    return false
+                }()
+                let currentQ = data["currentQuestRef"] as? DocumentReference
+
+                return ActiveQuestSystem(
+                    id: doc.documentID,
+                    questSystemRef: qsr,
+                    questSystemName: name,
+                    isUserSelected: isUserSelected,
+                    assignedAt: ts.dateValue(),
+                    status: status,
+                    currentQuestRef: currentQ
+                )
             }
         }
     }
 
     func togglePause(system: ActiveQuestSystem) {
-        guard let id = system.id else { return }
         let newStatus: SystemAssignmentStatus = (system.status == .active) ? .paused : .active
-        updateStatus(aqsId: id, status: newStatus)
+        updateStatus(aqsId: system.id, status: newStatus)
     }
 
     func stop(system: ActiveQuestSystem) {
-        guard let id = system.id else { return }
-        updateStatus(aqsId: id, status: .stopped)
+        updateStatus(aqsId: system.id, status: .stopped)
     }
 
     private func updateStatus(aqsId: String, status: SystemAssignmentStatus) {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
         let ref = db
             .collection("users")
-            .document(Auth.auth().currentUser!.uid)
+            .document(uid)
             .collection("activeQuestSystems")
             .document(aqsId)
 

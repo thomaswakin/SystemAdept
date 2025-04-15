@@ -24,13 +24,13 @@ final class QuestQueueViewModel: ObservableObject {
     private var timer: Timer?
     private var activeSystem: ActiveQuestSystem?
 
-    // MARK: - Public
+    // MARK: - Public API
 
     /// Begin listening for the next available quest in the given system.
     func start(for system: ActiveQuestSystem) {
         self.activeSystem = system
+        let aqsId = system.id  // non‑optional
 
-        guard let aqsId = system.id else { return }
         let qpColl = db
             .collection("users")
             .document(Auth.auth().currentUser!.uid)
@@ -47,20 +47,17 @@ final class QuestQueueViewModel: ObservableObject {
                     self.errorMessage = err.localizedDescription
                     return
                 }
-                
-                // ==== DEBUG LOGGING START ====
+
                 let docs = snap?.documents ?? []
                 print("🔍 QuestQueue listener fired. docs.count =", docs.count)
                 for doc in docs {
-                  print("   • qpId:", doc.documentID,
-                        "data:", doc.data())
+                    print("   • qpId:", doc.documentID)
                 }
-                // ==== DEBUG LOGGING END ====
 
                 let now = Date()
-                let availables = snap?.documents.compactMap { doc in
+                let availables = docs.compactMap { doc in
                     try? doc.data(as: QuestProgress.self)
-                } ?? []
+                }
 
                 if let next = availables.first(where: { ($0.availableAt ?? now) <= now }) {
                     self.current = next
@@ -80,13 +77,12 @@ final class QuestQueueViewModel: ObservableObject {
         guard
             let qp = current,
             let qpId = qp.id,
-            let aqs = activeSystem,
-            let aqsId = aqs.id,
-            let auraGain = questDetail?.questAuraGranted
+            let auraGain = questDetail?.questAuraGranted,
+            let aqs = activeSystem
         else { return }
 
-        // documentID is non‑optional, so extract it here
-        let systemId = aqs.questSystemRef.documentID
+        let aqsId = aqs.id  // non‑optional
+        let systemId = aqs.questSystemRef.documentID  // non‑optional
 
         let qpRef = userQuestProgressRef(aqsId: aqsId, qpId: qpId)
         let userRef = db.collection("users").document(Auth.auth().currentUser!.uid)
@@ -105,11 +101,8 @@ final class QuestQueueViewModel: ObservableObject {
             if let error = error {
                 self.errorMessage = error.localizedDescription
             } else {
-                DispatchQueue.main.async {
-                    self.lastAuraGained = auraGain
-                }
-                // Now unlock the next rank
-                self.unlockNextRank()
+                self.lastAuraGained = auraGain
+                self.unlockNextRank(systemId: systemId, aqsId: aqsId)
             }
         }
     }
@@ -119,10 +112,10 @@ final class QuestQueueViewModel: ObservableObject {
         guard
             let qp = current,
             let qpId = qp.id,
-            let aqs = activeSystem,
-            let aqsId = aqs.id
+            let aqs = activeSystem
         else { return }
 
+        let aqsId = aqs.id
         let qpRef = userQuestProgressRef(aqsId: aqsId, qpId: qpId)
         let unlockAt = Date().addingTimeInterval(24 * 3600)
 
@@ -141,7 +134,7 @@ final class QuestQueueViewModel: ObservableObject {
         stopTimer()
     }
 
-    // MARK: - Private
+    // MARK: - Private helpers
 
     private func fetchQuestDetail(for qp: QuestProgress) {
         qp.questRef.getDocument { [weak self] snapshot, error in
@@ -156,9 +149,7 @@ final class QuestQueueViewModel: ObservableObject {
             }
             do {
                 let quest = try snapshot.data(as: Quest.self)
-                DispatchQueue.main.async {
-                    self.questDetail = quest
-                }
+                self.questDetail = quest
             } catch {
                 self.errorMessage = error.localizedDescription
             }
@@ -188,16 +179,9 @@ final class QuestQueueViewModel: ObservableObject {
           .document(qpId)
     }
 
-    /// After completing a quest, check if all required quests of the current rank are completed.
-    /// If so, unlock the next rank’s quests.
-    private func unlockNextRank() {
-        guard
-            let aqs = activeSystem,
-            let aqsId = aqs.id
-        else { return }
-
-        // questSystemRef is already a DocumentReference
-        let systemRef = aqs.questSystemRef
+    /// Unlock the next rank’s quests after a completion.
+    private func unlockNextRank(systemId: String, aqsId: String) {
+        let systemRef = db.collection("questSystems").document(systemId)
 
         // 1) Fetch system defaults
         systemRef.getDocument { sysSnap, sysErr in
@@ -226,36 +210,40 @@ final class QuestQueueViewModel: ObservableObject {
                 var byRank: [Int: [(qp: QuestProgress, quest: Quest)]] = [:]
                 let group = DispatchGroup()
 
-                // 3) Decode each progress + fetch its Quest to group by rank
                 for doc in docs {
-                    guard let qp = try? doc.data(as: QuestProgress.self),
-                          let qpId = qp.id else { continue }
-                    group.enter()
-                    qp.questRef.getDocument { qSnap, qErr in
-                        defer { group.leave() }
-                        guard let qSnap = qSnap,
-                              let quest = try? qSnap.data(as: Quest.self)
-                        else { return }
-                        byRank[quest.questRank, default: []].append((qp, quest))
+                    if let qp = try? doc.data(as: QuestProgress.self),
+                       let qpId = qp.id {
+                        group.enter()
+                        qp.questRef.getDocument { qSnap, _ in
+                            defer { group.leave() }
+                            if let qSnap = qSnap,
+                               let quest = try? qSnap.data(as: Quest.self) {
+                                byRank[quest.questRank, default: []].append((qp, quest))
+                            }
+                        }
                     }
                 }
 
                 group.notify(queue: .main) {
-                    // 4) Determine the next rank to unlock
                     let sortedRanks = byRank.keys.sorted()
-                    // Find the smallest rank R such that all required quests in R are completed,
-                    // and there exists quests in R+1 to unlock.
                     for rank in sortedRanks {
                         let entries = byRank[rank]!
                         let required = entries.filter { $0.quest.isRequired }
                         let allDone = required.allSatisfy { $0.qp.status == .completed }
                         if allDone, let nextEntries = byRank[rank + 1] {
-                            // 5) Batch‑unlock those quests at rank+1
                             let batch = self.db.batch()
                             let now = Date()
                             for (qp, quest) in nextEntries where qp.status == .locked {
-                                let ttc = quest.timeToCompleteOverride ?? system.defaultTimeToComplete
-                                let duration = self.seconds(from: ttc)
+                                let ttc = quest.timeToCompleteOverride ?? system.defaultTimeToComplete!
+                                let duration: TimeInterval
+                                switch ttc.unit {
+                                case "minutes": duration = ttc.amount * 60
+                                case "hours":   duration = ttc.amount * 3600
+                                case "days":    duration = ttc.amount * 86400
+                                case "weeks":   duration = ttc.amount * 604800
+                                case "months":  duration = ttc.amount * 2592000
+                                default:        duration = ttc.amount
+                                }
                                 let qpRef = self.userQuestProgressRef(aqsId: aqsId, qpId: qp.id!)
                                 batch.updateData([
                                     "status": QuestProgressStatus.available.rawValue,
@@ -273,18 +261,6 @@ final class QuestQueueViewModel: ObservableObject {
                     }
                 }
             }
-        }
-    }
-    /// Convert a TimeIntervalConfig into seconds
-    private func seconds(from cfg: TimeIntervalConfig?) -> TimeInterval {
-        guard let cfg = cfg else { return 0 }
-        switch cfg.unit {
-        case "minutes": return cfg.amount * 60
-        case "hours":   return cfg.amount * 3600
-        case "days":    return cfg.amount * 86400
-        case "weeks":   return cfg.amount * 604800
-        case "months":  return cfg.amount * 2592000
-        default:        return cfg.amount
         }
     }
 }

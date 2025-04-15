@@ -11,49 +11,45 @@ struct QuestSystemListView: View {
   @StateObject private var viewModel = QuestSystemListViewModel()
 
   var body: some View {
-    NavigationView {
-      ZStack {
-        List(viewModel.systems) { system in
-          HStack {
-            Text(system.name)
-            Spacer()
-            Button(action: {
-              viewModel.select(system: system)
-            }) {
-              Text("Select")
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(viewModel.ineligibleSystemIds.contains(system.id ?? "")
-                            ? Color.gray.opacity(0.2)
-                            : Color.blue.opacity(0.2))
-                .cornerRadius(8)
-            }
-            .disabled(viewModel.ineligibleSystemIds.contains(system.id ?? ""))
+    ZStack {
+      List(viewModel.systems) { system in
+        HStack {
+          Text(system.name)
+          Spacer()
+          Button {
+            viewModel.select(system: system)
+          } label: {
+            Text("Select")
+              .padding(.horizontal, 12)
+              .padding(.vertical, 6)
+              .background(viewModel.ineligibleSystemIds.contains(system.id ?? "")
+                          ? Color.gray.opacity(0.2)
+                          : Color.blue.opacity(0.2))
+              .cornerRadius(8)
           }
-          .padding(.vertical, 4)
+          .disabled(viewModel.ineligibleSystemIds.contains(system.id ?? ""))
         }
-        .opacity(viewModel.isLoading ? 0.3 : 1)
+        .padding(.vertical, 4)
+      }
+      .opacity(viewModel.isLoading ? 0.3 : 1)
 
-        if viewModel.isLoading {
-          ProgressView("Loading systems…")
-            .padding()
-            .background(Color(.systemBackground))
-            .cornerRadius(10)
-            .shadow(radius: 5)
-        }
+      if viewModel.isLoading {
+        ProgressView("Loading systems…")
+          .padding()
+          .background(Color(.systemBackground))
+          .cornerRadius(10)
+          .shadow(radius: 5)
       }
-      .navigationTitle("Quest Systems")
-      .onAppear {
-        viewModel.loadSystems()
-      }
-      .alert(isPresented: Binding<Bool>(
-        get: { viewModel.errorMessage != nil },
-        set: { _ in viewModel.errorMessage = nil }
-      )) {
-        Alert(title: Text("Error"),
-              message: Text(viewModel.errorMessage ?? ""),
-              dismissButton: .default(Text("OK")))
-      }
+    }
+    .navigationTitle("Quest Systems")
+    .onAppear { viewModel.loadSystems() }
+    .alert(isPresented: Binding<Bool>(
+      get: { viewModel.errorMessage != nil },
+      set: { _ in viewModel.errorMessage = nil }
+    )) {
+      Alert(title: Text("Error"),
+            message: Text(viewModel.errorMessage ?? ""),
+            dismissButton: .default(Text("OK")))
     }
   }
 }

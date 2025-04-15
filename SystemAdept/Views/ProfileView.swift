@@ -5,7 +5,6 @@
 //  Created by Thomas Akin on 4/14/25.
 //
 
-
 import SwiftUI
 
 struct ProfileView: View {
@@ -18,14 +17,12 @@ struct ProfileView: View {
           .font(.title2)
       }
       Button("Logout") {
-        do {
-          try authVM.signOut()
-        } catch {
-          // handle error
-        }
+        do { try authVM.signOut() }
+        catch { /* handle error */ }
       }
       .foregroundColor(.red)
     }
     .padding()
+    .navigationTitle("Profile")
   }
 }
