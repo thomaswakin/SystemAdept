@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import FirebaseAuth
 import FirebaseFirestore
 import Combine
 
@@ -16,9 +17,13 @@ final class QuestSystemListViewModel: ObservableObject {
     @Published var ineligibleSystemIds: Set<String> = []
 
     private let db = Firestore.firestore()
-    private var cancellables = Set<AnyCancellable>()
 
-    /// Load all quest systems from Firestore.
+    init() {
+        loadActiveSystemIds()
+        loadSystems()
+    }
+
+    /// Fetch global quest systems.
     func loadSystems() {
         isLoading = true
         db.collection("questSystems")
@@ -29,16 +34,37 @@ final class QuestSystemListViewModel: ObservableObject {
                     self.errorMessage = error.localizedDescription
                     return
                 }
-                guard let docs = snapshot?.documents else { return }
-
-                // Manual decode each QuestSystem
-                self.systems = docs.compactMap { doc in
-                    QuestSystem(from: doc)
-                }
+                let docs = snapshot?.documents ?? []
+                self.systems = docs.compactMap { QuestSystem(from: $0) }
             }
     }
 
-    /// When the user selects a system, assign it via UserQuestService.
+    /// Fetch the user's currently active/paused systems to disable re‑adding.
+    func loadActiveSystemIds() {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        db.collection("users")
+          .document(uid)
+          .collection("activeQuestSystems")
+          .getDocuments { [weak self] snapshot, error in
+            guard let self = self else { return }
+            if let error = error {
+                print("Error loading active systems:", error)
+                return
+            }
+            let docs = snapshot?.documents ?? []
+            let ids = docs.filter { doc in
+                let status = doc.data()["status"] as? String ?? ""
+                return status != SystemAssignmentStatus.completed.rawValue
+                    && status != SystemAssignmentStatus.stopped.rawValue
+            }
+            .compactMap { doc in
+                (doc.data()["questSystemRef"] as? DocumentReference)?.documentID
+            }
+            self.ineligibleSystemIds = Set(ids)
+        }
+    }
+
+    /// Assign a new system to the user.
     func select(system: QuestSystem) {
         isLoading = true
         UserQuestService().assignSystem(systemId: system.id) { [weak self] result in
@@ -47,7 +73,7 @@ final class QuestSystemListViewModel: ObservableObject {
                 self.isLoading = false
                 switch result {
                 case .success:
-                    // Mark this system as ineligible until completed/stopped
+                    // Prevent re‑adding until this system is completed/stopped
                     self.ineligibleSystemIds.insert(system.id)
                 case .failure(let err):
                     self.errorMessage = err.localizedDescription
