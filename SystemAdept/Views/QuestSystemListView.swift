@@ -41,7 +41,7 @@ struct QuestSystemListView: View {
           .shadow(radius: 5)
       }
     }
-    .navigationTitle("Quest Systems")
+    .navigationTitle("Available Systems")
     .onAppear { viewModel.loadSystems() }
     .alert(isPresented: Binding<Bool>(
       get: { viewModel.errorMessage != nil },
