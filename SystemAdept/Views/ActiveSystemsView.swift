@@ -34,7 +34,7 @@ struct ActiveSystemsView: View {
       }
       .padding(.vertical, 4)
     }
-    .navigationTitle("Active Systems")
+    .navigationTitle("My Systems")
     .navigationDestination(for: ActiveQuestSystem.self) { system in
       QuestQueueView(activeSystem: system)
     }

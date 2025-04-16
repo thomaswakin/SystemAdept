@@ -20,7 +20,7 @@ struct MyQuestsView: View {
                 questsScrollView
             }
         }
-        .navigationTitle("My Quests")
+        .navigationTitle("Active Quests")
     }
 
     // MARK: - Subviews
