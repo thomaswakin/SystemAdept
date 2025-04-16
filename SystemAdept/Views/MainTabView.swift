@@ -12,7 +12,7 @@ struct MainTabView: View {
   @State private var selectedTab: Tab = .browse
 
   enum Tab {
-    case browse, systems, profile
+    case browse, systems, quests, profile
   }
 
   var body: some View {
@@ -28,6 +28,12 @@ struct MainTabView: View {
       }
       .tabItem { Label("My Systems", systemImage: "checkmark.circle") }
       .tag(Tab.systems)
+
+      NavigationStack {
+        MyQuestsView()
+      }
+      .tabItem { Label("My Quests", systemImage: "flag.circle") }
+      .tag(Tab.quests)
 
       NavigationStack {
         ProfileView()
