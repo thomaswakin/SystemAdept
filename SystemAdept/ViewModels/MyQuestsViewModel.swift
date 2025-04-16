@@ -10,9 +10,9 @@ import FirebaseAuth
 import FirebaseFirestore
 import Combine
 
-/// Combines a QuestProgress with its parent system’s name and the Quest definition.
 struct ActiveQuest: Identifiable {
-    let id: String              // questProgress document ID
+    let id: String         // questProgress doc ID
+    let aqsId: String      // activeQuestSystem ID
     let systemName: String
     let progress: QuestProgress
     let quest: Quest
@@ -25,8 +25,6 @@ final class MyQuestsViewModel: ObservableObject {
     private let db = Firestore.firestore()
     private var aqsListener: ListenerRegistration?
     private var qpListeners: [String: ListenerRegistration] = [:]
-
-    /// Holds the latest list of quests for each active system.
     private var systemQuests: [String: [ActiveQuest]] = [:]
 
     init() {
@@ -52,15 +50,15 @@ final class MyQuestsViewModel: ObservableObject {
             }
             let docs = snap?.documents ?? []
 
-            // Remove listeners for systems that are no longer active
+            // Clean up listeners & caches for removed systems
             let currentIds = Set(docs.map { $0.documentID })
-            for removedId in qpListeners.keys where !currentIds.contains(removedId) {
-                qpListeners[removedId]?.remove()
-                qpListeners.removeValue(forKey: removedId)
-                self.systemQuests.removeValue(forKey: removedId)
+            for removed in qpListeners.keys where !currentIds.contains(removed) {
+                qpListeners[removed]?.remove()
+                qpListeners.removeValue(forKey: removed)
+                systemQuests.removeValue(forKey: removed)
             }
 
-            // Add listeners for any newly active systems
+            // Add listeners for newly active systems
             for doc in docs {
                 let aqsId = doc.documentID
                 if qpListeners[aqsId] == nil {
@@ -71,9 +69,7 @@ final class MyQuestsViewModel: ObservableObject {
                     listenQuestProgress(for: aqsId, systemName: systemName)
                 }
             }
-
-            // After adjusting listeners, recompute the flat list
-            self.recomputeActiveQuests()
+            recomputeActiveQuests()
         }
     }
 
@@ -81,12 +77,17 @@ final class MyQuestsViewModel: ObservableObject {
         guard let uid = Auth.auth().currentUser?.uid else { return }
         let qpColl = db
             .collection("users").document(uid)
-            .collection("activeQuestSystems")
-            .document(aqsId)
+            .collection("activeQuestSystems").document(aqsId)
             .collection("questProgress")
 
+        // Listen to both available and completed statuses
+        let statuses = [
+            QuestProgressStatus.available.rawValue,
+            QuestProgressStatus.completed.rawValue
+        ]
+
         let listener = qpColl
-            .whereField("status", isEqualTo: QuestProgressStatus.available.rawValue)
+            .whereField("status", in: statuses)
             .order(by: "availableAt")
             .addSnapshotListener { [weak self] snap, err in
                 guard let self = self else { return }
@@ -95,14 +96,12 @@ final class MyQuestsViewModel: ObservableObject {
                     return
                 }
                 let docs = snap?.documents ?? []
-                var newList: [ActiveQuest] = []
+                var list: [ActiveQuest] = []
                 let group = DispatchGroup()
 
                 for doc in docs {
-                    // Decode QuestProgress
                     guard let qp = try? doc.data(as: QuestProgress.self),
                           let qpId = qp.id else { continue }
-
                     group.enter()
                     qp.questRef.getDocument { qSnap, _ in
                         defer { group.leave() }
@@ -110,22 +109,19 @@ final class MyQuestsViewModel: ObservableObject {
                             let qSnap = qSnap,
                             let qData = qSnap.data(),
                             let quest = Quest(from: qData, id: qSnap.documentID)
-                        else {
-                            return
-                        }
-                        let aq = ActiveQuest(
+                        else { return }
+                        list.append(ActiveQuest(
                             id: qpId,
+                            aqsId: aqsId,
                             systemName: systemName,
                             progress: qp,
                             quest: quest
-                        )
-                        newList.append(aq)
+                        ))
                     }
                 }
 
                 group.notify(queue: .main) {
-                    // Store this system's quests, then recompute the aggregate
-                    self.systemQuests[aqsId] = newList
+                    self.systemQuests[aqsId] = list
                     self.recomputeActiveQuests()
                 }
             }
@@ -133,12 +129,31 @@ final class MyQuestsViewModel: ObservableObject {
         qpListeners[aqsId] = listener
     }
 
-    /// Flattens `systemQuests` into `activeQuests`, sorted by availableAt.
     private func recomputeActiveQuests() {
         let now = Date()
+        // Flatten all systems’ quests
         let all = systemQuests.values.flatMap { $0 }
-        self.activeQuests = all.sorted {
+        // Sort by soonest availableAt (for consistency; view will filter further)
+        activeQuests = all.sorted {
             ($0.progress.availableAt ?? now) < ($1.progress.availableAt ?? now)
+        }
+    }
+
+    /// Marks an available quest as completed.
+    func complete(_ aq: ActiveQuest) {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        let qpRef = db
+            .collection("users").document(uid)
+            .collection("activeQuestSystems").document(aq.aqsId)
+            .collection("questProgress").document(aq.id)
+
+        qpRef.updateData([
+            "status": QuestProgressStatus.completed.rawValue,
+            "completedAt": Timestamp(date: Date())
+        ]) { [weak self] err in
+            if let err = err {
+                self?.errorMessage = err.localizedDescription
+            }
         }
     }
 }
