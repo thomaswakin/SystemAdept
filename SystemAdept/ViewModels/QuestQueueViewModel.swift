@@ -11,31 +11,24 @@ import FirebaseFirestore
 import Combine
 
 final class QuestQueueViewModel: ObservableObject {
-    // MARK: - Published
     @Published var current: QuestProgress?
     @Published var questDetail: Quest?
     @Published var countdown: TimeInterval = 0
     @Published var errorMessage: String?
     @Published var lastAuraGained: Double?
 
-    // MARK: - Private
     private let db = Firestore.firestore()
     private var listener: ListenerRegistration?
     private var timer: Timer?
     private var activeSystem: ActiveQuestSystem?
 
-    // MARK: - Public API
-
-    /// Begin listening for the next available quest in the given system.
     func start(for system: ActiveQuestSystem) {
         self.activeSystem = system
-        let aqsId = system.id  // non‑optional
-
         let qpColl = db
             .collection("users")
             .document(Auth.auth().currentUser!.uid)
             .collection("activeQuestSystems")
-            .document(aqsId)
+            .document(system.id)
             .collection("questProgress")
 
         listener = qpColl
@@ -47,15 +40,14 @@ final class QuestQueueViewModel: ObservableObject {
                     self.errorMessage = err.localizedDescription
                     return
                 }
-
                 let docs = snap?.documents ?? []
-                print("🔍 QuestQueue listener fired. docs.count =", docs.count)
-                for doc in docs {
-                    print("   • qpId:", doc.documentID)
-                }
-
                 let now = Date()
-                let availables = docs.compactMap { doc in
+
+                // Debug
+                print("🔍 QuestQueue listener fired. docs.count =", docs.count)
+
+                // Map to QuestProgress
+                let availables = docs.compactMap { doc -> QuestProgress? in
                     try? doc.data(as: QuestProgress.self)
                 }
 
@@ -72,7 +64,6 @@ final class QuestQueueViewModel: ObservableObject {
             }
     }
 
-    /// Mark the current quest completed, increment aura, and then unlock the next rank if appropriate.
     func completeCurrent() {
         guard
             let qp = current,
@@ -81,9 +72,8 @@ final class QuestQueueViewModel: ObservableObject {
             let aqs = activeSystem
         else { return }
 
-        let aqsId = aqs.id  // non‑optional
-        let systemId = aqs.questSystemRef.documentID  // non‑optional
-
+        let aqsId = aqs.id
+        let systemId = aqs.questSystemRef.documentID
         let qpRef = userQuestProgressRef(aqsId: aqsId, qpId: qpId)
         let userRef = db.collection("users").document(Auth.auth().currentUser!.uid)
 
@@ -107,7 +97,6 @@ final class QuestQueueViewModel: ObservableObject {
         }
     }
 
-    /// Pause the current quest for 24 hours.
     func pauseCurrent() {
         guard
             let qp = current,
@@ -134,8 +123,6 @@ final class QuestQueueViewModel: ObservableObject {
         stopTimer()
     }
 
-    // MARK: - Private helpers
-
     private func fetchQuestDetail(for qp: QuestProgress) {
         qp.questRef.getDocument { [weak self] snapshot, error in
             guard let self = self else { return }
@@ -143,16 +130,15 @@ final class QuestQueueViewModel: ObservableObject {
                 self.errorMessage = error.localizedDescription
                 return
             }
-            guard let snapshot = snapshot else {
-                self.errorMessage = "No quest data found."
+            guard
+                let snapshot = snapshot,
+                let data = snapshot.data(),
+                let quest = Quest(from: data, id: snapshot.documentID)
+            else {
+                self.errorMessage = "Failed to load quest detail."
                 return
             }
-            do {
-                let quest = try snapshot.data(as: Quest.self)
-                self.questDetail = quest
-            } catch {
-                self.errorMessage = error.localizedDescription
-            }
+            self.questDetail = quest
         }
     }
 
@@ -179,21 +165,24 @@ final class QuestQueueViewModel: ObservableObject {
           .document(qpId)
     }
 
-    /// Unlock the next rank’s quests after a completion.
     private func unlockNextRank(systemId: String, aqsId: String) {
         let systemRef = db.collection("questSystems").document(systemId)
 
-        // 1) Fetch system defaults
-        systemRef.getDocument { sysSnap, sysErr in
+        systemRef.getDocument { [weak self] sysSnap, sysErr in
+            guard let self = self else { return }
             if let sysErr = sysErr {
                 print("Error fetching system:", sysErr)
                 return
             }
-            guard let sysSnap = sysSnap,
-                  let system = try? sysSnap.data(as: QuestSystem.self)
-            else { return }
+            guard
+                let snap = sysSnap,
+                let questSystem = QuestSystem(from: snap)
+            else {
+                print("Malformed QuestSystem data")
+                return
+            }
 
-            // 2) Fetch all questProgress docs
+            // Fetch all questProgress docs
             let qpColl = self.db
                 .collection("users")
                 .document(Auth.auth().currentUser!.uid)
@@ -216,8 +205,11 @@ final class QuestQueueViewModel: ObservableObject {
                         group.enter()
                         qp.questRef.getDocument { qSnap, _ in
                             defer { group.leave() }
-                            if let qSnap = qSnap,
-                               let quest = try? qSnap.data(as: Quest.self) {
+                            if
+                                let qSnap = qSnap,
+                                let data = qSnap.data(),
+                                let quest = Quest(from: data, id: qSnap.documentID)
+                            {
                                 byRank[quest.questRank, default: []].append((qp, quest))
                             }
                         }
@@ -234,17 +226,20 @@ final class QuestQueueViewModel: ObservableObject {
                             let batch = self.db.batch()
                             let now = Date()
                             for (qp, quest) in nextEntries where qp.status == .locked {
-                                let ttc = quest.timeToCompleteOverride ?? system.defaultTimeToComplete!
+                                // Use questSystem.defaultTimeToComplete here
+                                let ttcCfg = quest.timeToCompleteOverride
+                                              ?? questSystem.defaultTimeToComplete
                                 let duration: TimeInterval
-                                switch ttc.unit {
-                                case "minutes": duration = ttc.amount * 60
-                                case "hours":   duration = ttc.amount * 3600
-                                case "days":    duration = ttc.amount * 86400
-                                case "weeks":   duration = ttc.amount * 604800
-                                case "months":  duration = ttc.amount * 2592000
-                                default:        duration = ttc.amount
+                                switch ttcCfg.unit {
+                                case "minutes": duration = ttcCfg.amount * 60
+                                case "hours":   duration = ttcCfg.amount * 3600
+                                case "days":    duration = ttcCfg.amount * 86400
+                                case "weeks":   duration = ttcCfg.amount * 604800
+                                case "months":  duration = ttcCfg.amount * 2592000
+                                default:        duration = ttcCfg.amount
                                 }
-                                let qpRef = self.userQuestProgressRef(aqsId: aqsId, qpId: qp.id!)
+                                let qpRef = self.userQuestProgressRef(aqsId: aqsId,
+                                                                      qpId: qp.id!)
                                 batch.updateData([
                                     "status": QuestProgressStatus.available.rawValue,
                                     "availableAt": Timestamp(date: now),

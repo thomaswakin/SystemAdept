@@ -10,9 +10,9 @@ import FirebaseAuth
 import FirebaseFirestore
 import Combine
 
-/// Combines a QuestProgress with its parent system name and the Quest definition.
+/// Combines a QuestProgress with its parent system’s name and the Quest definition.
 struct ActiveQuest: Identifiable {
-    let id: String
+    let id: String              // questProgress document ID
     let systemName: String
     let progress: QuestProgress
     let quest: Quest
@@ -92,31 +92,35 @@ final class MyQuestsViewModel: ObservableObject {
                 let group = DispatchGroup()
 
                 for doc in docs {
-                    // Decode QuestProgress
-                    if let qp = try? doc.data(as: QuestProgress.self) {
-                        // qp.questRef is non-optional, use directly
-                        let questRef = qp.questRef
-                        group.enter()
-                        questRef.getDocument { qSnap, qErr in
-                            defer { group.leave() }
-                            if let qSnap = qSnap,
-                               let quest = try? qSnap.data(as: Quest.self) {
-                                let aq = ActiveQuest(
-                                    id: doc.documentID,
-                                    systemName: systemName,
-                                    progress: qp,
-                                    quest: quest
-                                )
-                                newList.append(aq)
-                            }
+                    // Decode QuestProgress (still uses data(as:))
+                    guard let qp = try? doc.data(as: QuestProgress.self),
+                          let qpId = qp.id else { continue }
+
+                    group.enter()
+                    qp.questRef.getDocument { qSnap, _ in
+                        defer { group.leave() }
+                        guard
+                            let qSnap = qSnap,
+                            let qData = qSnap.data(),
+                            let quest = Quest(from: qData, id: qSnap.documentID)
+                        else {
+                            return
                         }
+                        let activeQuest = ActiveQuest(
+                            id: qpId,
+                            systemName: systemName,
+                            progress: qp,
+                            quest: quest
+                        )
+                        newList.append(activeQuest)
                     }
                 }
 
                 group.notify(queue: .main) {
-                    // Sort by availableAt ascending
+                    // Sort by soonest availableAt
                     self.activeQuests = newList.sorted {
-                        ($0.progress.availableAt ?? Date()) < ($1.progress.availableAt ?? Date())
+                        ($0.progress.availableAt ?? Date())
+                        < ($1.progress.availableAt ?? Date())
                     }
                 }
             }

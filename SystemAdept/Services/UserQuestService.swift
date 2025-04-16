@@ -169,8 +169,9 @@ final class UserQuestService {
                 let batch = self.db.batch()
 
                 for qDoc in questDocs {
-                    guard let quest = try? qDoc.data(as: Quest.self),
-                          let qId = quest.id else { continue }
+                    let qId = qDoc.documentID
+                    let data = qDoc.data()
+                    guard let quest = Quest(from: data, id: qId) else { continue }
 
                     let qpRef = userQPBase.document(qId)
                     var qpData: [String: Any] = [
@@ -179,6 +180,7 @@ final class UserQuestService {
                         "failedCount": 0
                     ]
 
+                    // Unlock rank 1 required quests
                     if quest.questRank == 1 && quest.isRequired {
                         let ttcCfg = quest.timeToCompleteOverride ?? defaultTTC
                         let duration = seconds(from: ttcCfg)
