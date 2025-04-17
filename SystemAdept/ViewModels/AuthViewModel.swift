@@ -20,6 +20,7 @@ final class AuthViewModel: ObservableObject {
 
     init() {
         authHandle = Auth.auth().addStateDidChangeListener { [weak self] _, user in
+            print("🔑 Auth state changed, user:", user?.uid ?? "nil")
             self?.firebaseUser = user
             self?.attachUserListener(for: user?.uid)
         }
@@ -35,19 +36,41 @@ final class AuthViewModel: ObservableObject {
     private func attachUserListener(for uid: String?) {
         userListener?.remove()
         guard let uid = uid else {
-            self.userProfile = nil
+            print("👤 No UID, clearing userProfile")
+            DispatchQueue.main.async { self.userProfile = nil }
             return
         }
+
         let ref = Firestore.firestore()
             .collection("users")
             .document(uid)
-        userListener = ref.addSnapshotListener { [weak self] snap, error in
+
+        // On first fetch, ensure restCycle fields exist
+        ref.getDocument { snap, error in
             if let error = error {
-                print("Error listening to user profile:", error)
+                print("⚠️ Initial get error:", error)
                 return
             }
             guard let snap = snap else { return }
-            // Always construct an AppUser, even if some fields are missing
+            let data = snap.data() ?? [:]
+            if data["restCycleStartHour"] == nil {
+                print("🛌 Setting default rest cycle")
+                ref.setData([
+                    "restCycleStartHour": 22,
+                    "restCycleStartMinute": 0,
+                    "restCycleEndHour": 6,
+                    "restCycleEndMinute": 0
+                ], merge: true)
+            }
+        }
+
+        // Real‑time listener
+        userListener = ref.addSnapshotListener { [weak self] snap, error in
+            if let error = error {
+                print("⚠️ SnapshotListener error:", error)
+                return
+            }
+            guard let snap = snap else { return }
             let profile = AppUser(from: snap)
             DispatchQueue.main.async {
                 self?.userProfile = profile
@@ -57,6 +80,20 @@ final class AuthViewModel: ObservableObject {
 
     func signOut() throws {
         try Auth.auth().signOut()
+    }
+
+    /// Updates the user's rest cycle.
+    func setRestCycle(startHour: Int, startMinute: Int,
+                      endHour: Int, endMinute: Int) {
+        guard let uid = firebaseUser?.uid else { return }
+        let userRef = Firestore.firestore()
+            .collection("users").document(uid)
+        userRef.setData([
+            "restCycleStartHour": startHour,
+            "restCycleStartMinute": startMinute,
+            "restCycleEndHour": endHour,
+            "restCycleEndMinute": endMinute
+        ], merge: true)
     }
 }
 

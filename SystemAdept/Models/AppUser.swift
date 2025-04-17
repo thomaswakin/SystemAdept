@@ -22,6 +22,7 @@ struct AppUser: Identifiable {
     let skillPoints: Int
     let agility: Agility
     let strength: Strength
+    let restCycle: RestCycle
 
     struct Agility {
         let speed: Int
@@ -33,8 +34,13 @@ struct AppUser: Identifiable {
         let lowerBody: Int
         let upperBody: Int
     }
+    struct RestCycle {
+        let startHour: Int
+        let startMinute: Int
+        let endHour: Int
+        let endMinute: Int
+    }
 
-    /// Initialize from a Firestore document snapshot, with defaults for missing or mismatched types.
     init(from snapshot: DocumentSnapshot) {
         let data = snapshot.data() ?? [:]
         self.id = snapshot.documentID
@@ -58,16 +64,29 @@ struct AppUser: Identifiable {
         self.agility = Agility(
             speed: AppUser.intVal(ag["speed"]),
             balance: AppUser.intVal(ag["balance"]),
-            flexibility: AppUser.intVal(ag["flexibility"]) )
+            flexibility: AppUser.intVal(ag["flexibility"])
+        )
 
         let st = data["strength"] as? [String:Any] ?? [:]
         self.strength = Strength(
             core: AppUser.intVal(st["core"]),
             lowerBody: AppUser.intVal(st["lowerBody"]),
-            upperBody: AppUser.intVal(st["upperBody"]) )
+            upperBody: AppUser.intVal(st["upperBody"])
+        )
+
+        // Rest cycle fields (default 22:00–06:00)
+        let rsH = data["restCycleStartHour"] as? Int ?? 22
+        let rsM = data["restCycleStartMinute"] as? Int ?? 0
+        let reH = data["restCycleEndHour"] as? Int ?? 6
+        let reM = data["restCycleEndMinute"] as? Int ?? 0
+        self.restCycle = RestCycle(
+            startHour: rsH,
+            startMinute: rsM,
+            endHour: reH,
+            endMinute: reM
+        )
     }
 
-    /// Helper to convert Int, Double, or String to Int, defaulting to 0.
     private static func intVal(_ val: Any?) -> Int {
         if let i = val as? Int { return i }
         if let d = val as? Double { return Int(d) }
