@@ -9,193 +9,195 @@ import Foundation
 import FirebaseAuth
 import FirebaseFirestore
 
+/// Computes when the next quests should become available, given:
+/// - lastExpiration: the Date the last quest expired or completed
+/// - restCycle: user’s rest window
+private func calculateNextStart(
+    after lastExpiration: Date,
+    restCycle: AppUser.RestCycle,
+    calendar: Calendar = .current
+) -> Date {
+    let dayStart = calendar.startOfDay(for: lastExpiration)
+    let restStartBase = calendar.date(
+        byAdding: .hour, value: restCycle.startHour,
+        to: dayStart
+    )!.addingTimeInterval(TimeInterval(restCycle.startMinute * 60))
+
+    let restEndBase = calendar.date(
+        byAdding: .hour, value: restCycle.endHour,
+        to: dayStart
+    )!.addingTimeInterval(TimeInterval(restCycle.endMinute * 60))
+
+    // Handle overnight rest window
+    let restEnd = restEndBase < restStartBase
+        ? calendar.date(byAdding: .day, value: 1, to: restEndBase)!
+        : restEndBase
+
+    // If within rest window, defer to end of rest
+    if lastExpiration >= restStartBase && lastExpiration < restEnd {
+        return restEnd
+    }
+    // Otherwise, unlock immediately
+    return lastExpiration
+}
+
 final class UserQuestService {
+    static let shared = UserQuestService()
     private let db = Firestore.firestore()
-    private var uid: String { Auth.auth().currentUser!.uid }
+    private init() {}
 
-    /// Assigns a QuestSystem to the user and initializes its quests.
-    func assignSystem(systemId: String,
-                      isUserSelected: Bool = true,
-                      completion: @escaping (Result<ActiveQuestSystem, Error>) -> Void) {
-        let sysRef = db.collection("questSystems").document(systemId)
-        sysRef.getDocument { sysSnap, sysErr in
-            if let sysErr = sysErr {
-                return completion(.failure(sysErr))
-            }
-            let systemName = sysSnap?.data()?["name"] as? String ?? "Unknown"
+    /// Marks a quest completed, grants aura (with debuff), then unlocks next rank.
+    func completeQuest(
+        aqsId: String,
+        progress: QuestProgress,
+        quest: Quest,
+        system: QuestSystem,
+        user: AppUser
+    ) {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
 
-            let aqsRef = self.db
-                .collection("users").document(self.uid)
-                .collection("activeQuestSystems")
-                .document()
-
-            let aqsData: [String: Any] = [
-                "questSystemRef": sysRef,
-                "questSystemName": systemName,
-                "isUserSelected": isUserSelected,
-                "assignedAt": Timestamp(date: Date()),
-                "status": SystemAssignmentStatus.active.rawValue
-            ]
-
-            aqsRef.setData(aqsData) { error in
-                if let error = error {
-                    return completion(.failure(error))
-                }
-
-                // Initialize quests for this assignment
-                self.initializeQuestProgress(systemId: systemId,
-                                             aqsId: aqsRef.documentID) { initError in
-                    if let initError = initError {
-                        return completion(.failure(initError))
-                    }
-
-                    // Re-fetch the ActiveQuestSystem and decode manually
-                    aqsRef.getDocument { snap, err in
-                        if let err = err {
-                            return completion(.failure(err))
-                        }
-                        guard let doc = snap, let data = doc.data() else {
-                            let e = NSError(domain: "", code: -1,
-                                            userInfo: [NSLocalizedDescriptionKey: "No AQS snapshot"])
-                            return completion(.failure(e))
-                        }
-                        // Manual decode
-                        guard
-                            let qsr = data["questSystemRef"] as? DocumentReference,
-                            let statusStr = data["status"] as? String,
-                            let status = SystemAssignmentStatus(rawValue: statusStr),
-                            let ts = data["assignedAt"] as? Timestamp
-                        else {
-                            let e = NSError(domain: "", code: -1,
-                                            userInfo: [NSLocalizedDescriptionKey: "Malformed AQS data"])
-                            return completion(.failure(e))
-                        }
-                        let name = data["questSystemName"] as? String ?? qsr.documentID
-                        let isUserSelected: Bool = {
-                            if let b = data["isUserSelected"] as? Bool { return b }
-                            if let i = data["isUserSelected"] as? Int  { return i != 0 }
-                            return false
-                        }()
-                        let currentQ = data["currentQuestRef"] as? DocumentReference
-
-                        let aqs = ActiveQuestSystem(
-                            id: doc.documentID,
-                            questSystemRef: qsr,
-                            questSystemName: name,
-                            isUserSelected: isUserSelected,
-                            assignedAt: ts.dateValue(),
-                            status: status,
-                            currentQuestRef: currentQ
-                        )
-                        completion(.success(aqs))
-                    }
-                }
-            }
-        }
-    }
-
-    /// Re‑runs initialization for an existing assignment.
-    func refreshProgress(for aqsId: String,
-                         systemId: String,
-                         completion: @escaping (Error?) -> Void) {
-        initializeQuestProgress(systemId: systemId, aqsId: aqsId, completion: completion)
-    }
-
-    /// Updates the assignment’s status (pause/stop).
-    func updateSystemStatus(aqsId: String,
-                            status: SystemAssignmentStatus,
-                            completion: ((Error?) -> Void)? = nil) {
-        let ref = db
+        let qpRef = db
             .collection("users").document(uid)
-            .collection("activeQuestSystems")
-            .document(aqsId)
-        ref.updateData(["status": status.rawValue]) { error in
-            completion?(error)
+            .collection("activeQuestSystems").document(aqsId)
+            .collection("questProgress").document(progress.id!)
+
+        // Compute debuffed aura gain
+        let failedCount = Double(progress.failedCount)
+        let debuffFactor = quest.questRepeatDebuffOverride ?? 1.0
+        let multiplier = pow(debuffFactor, failedCount)
+        let auraGain = quest.questAuraGranted * multiplier
+
+        let userRef = db.collection("users").document(uid)
+
+        let batch = db.batch()
+        // 1) mark quest completed
+        batch.updateData([
+            "status": QuestProgressStatus.completed.rawValue,
+            "completedAt": Timestamp(date: Date())
+        ], forDocument: qpRef)
+
+        // 2) increment user aura
+        batch.updateData([
+            "aura": FieldValue.increment(auraGain)
+        ], forDocument: userRef)
+
+        batch.commit { [weak self] err in
+            if let err = err {
+                print("Error completing quest:", err)
+                return
+            }
+            self?.computeAndUnlockNextRank(
+                aqsId: aqsId,
+                system: system,
+                user: user
+            )
         }
     }
 
-    // MARK: - Private
+    /// After finishing a rank, schedules the next rank’s quests for availability.
+    private func computeAndUnlockNextRank(
+        aqsId: String,
+        system: QuestSystem,
+        user: AppUser
+    ) {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
 
-    /// Seeds the questProgress subcollection, unlocking rank 1 required quests.
-    private func initializeQuestProgress(systemId: String,
-                                         aqsId: String,
-                                         completion: @escaping (Error?) -> Void) {
-        let systemRef = db.collection("questSystems").document(systemId)
-        let questsRef = systemRef.collection("quests")
-        let userQPBase = db
+        let qpColl = db
             .collection("users").document(uid)
             .collection("activeQuestSystems").document(aqsId)
             .collection("questProgress")
 
-        func seconds(from cfg: TimeIntervalConfig) -> TimeInterval {
-            switch cfg.unit {
-            case "seconds": return cfg.amount
-            case "minutes": return cfg.amount * 60
-            case "hours":   return cfg.amount * 3600
-            case "days":    return cfg.amount * 86400
-            case "weeks":   return cfg.amount * 604800
-            case "months":  return cfg.amount * 2592000
-            default:        return cfg.amount
+        qpColl.getDocuments(source: .default) { [weak self] snap, err in
+            guard let self = self,
+                  let docs = snap?.documents,
+                  err == nil else {
+                print("Error fetching questProgress:", err ?? "unknown")
+                return
             }
-        }
 
-        // 1) Fetch system defaults
-        systemRef.getDocument { sysSnap, sysErr in
-            if let sysErr = sysErr {
-                return completion(sysErr)
+            // Parse progress items with raw rank and expiration
+            struct Prog { let progress: QuestProgress; let rank: Int; let expiration: Date }
+            var items: [Prog] = []
+            for docSnap in docs {
+                let data = docSnap.data()
+                // Decode QuestProgress
+                guard let qp = try? docSnap.data(as: QuestProgress.self) else { continue }
+                // Parse rank from raw data
+                let rankVal: Int = {
+                    if let i = data["questRank"] as? Int { return i }
+                    if let s = data["questRank"] as? String, let i = Int(s) { return i }
+                    return 0
+                }()
+                // Parse expiration timestamp
+                guard let ts = data["expirationTime"] as? Timestamp else { continue }
+                let expDate = ts.dateValue()
+                items.append(Prog(progress: qp, rank: rankVal, expiration: expDate))
             }
-            guard let sysData = sysSnap?.data() else {
-                let e = NSError(domain: "", code: -1,
-                                userInfo: [NSLocalizedDescriptionKey: "Missing system data"])
-                return completion(e)
+
+            // Group by rank
+            let grouped = Dictionary(grouping: items, by: { $0.rank })
+            let sortedRanks = grouped.keys.sorted()
+
+            // Find max fully-completed rank
+            var completedMaxRank: Int? = nil
+            for rank in sortedRanks {
+                let group = grouped[rank]!
+                if group.allSatisfy({ $0.progress.status == .completed }) {
+                    completedMaxRank = rank
+                }
             }
-            // Default to 1 day if missing
-            let defaultTTC: TimeIntervalConfig = {
-                if let cfg = sysData["defaultTimeToComplete"] as? [String:Any],
-                   let amt = cfg["amount"] as? Double,
-                   let unit = cfg["unit"] as? String {
-                    return TimeIntervalConfig(amount: amt, unit: unit)
-                }
-                return TimeIntervalConfig(amount: 1, unit: "days")
-            }()
+            guard let lastRank = completedMaxRank else { return }
+            let nextRank = lastRank + 1
 
-            // 2) Fetch quests
-            questsRef.getDocuments { questSnap, questErr in
-                if let questErr = questErr {
-                    return completion(questErr)
-                }
-                let questDocs = questSnap?.documents ?? []
-                let now = Date()
-                let batch = self.db.batch()
+            // Early exit if no next-rank quests
+            guard let nextQuests = system.questsByRank[nextRank], !nextQuests.isEmpty else {
+                return
+            }
 
-                for qDoc in questDocs {
-                    let qId = qDoc.documentID
-                    let data = qDoc.data()
-                    guard let quest = Quest(from: data, id: qId) else { continue }
+            // Compute latest expiration in lastRank
+            let lastExp = grouped[lastRank]!
+                .map({ $0.expiration })
+                .max() ?? Date()
 
-                    let qpRef = userQPBase.document(qId)
-                    var qpData: [String: Any] = [
-                        "questRef": qDoc.reference,
-                        "status": "locked",
-                        "failedCount": 0
-                    ]
+            // Calculate next start respecting rest cycle
+            let nextStart = calculateNextStart(
+                after: lastExp,
+                restCycle: user.restCycle
+            )
 
-                    // Unlock rank 1 required quests
-                    if quest.questRank == 1 && quest.isRequired {
-                        let ttcCfg = quest.timeToCompleteOverride ?? defaultTTC
-                        let duration = seconds(from: ttcCfg)
-                        qpData["status"] = "available"
-                        qpData["availableAt"] = Timestamp(date: now)
-                        qpData["expirationTime"] = Timestamp(date: now.addingTimeInterval(duration))
-                    }
+            // Prepare Firestore references
+            let systemDocRef = db
+                .collection("questSystems").document(system.id)
+            let questDefsColl = systemDocRef.collection("quests")
 
-                    batch.setData(qpData, forDocument: qpRef)
-                }
+            // Batch-unlock next rank quests
+            let batch = db.batch()
+            for questDef in nextQuests {
+                let newDocID = "\(questDef.questName)_\(nextRank)"
+                let newQPRef = qpColl.document(newDocID)
 
-                batch.commit { batchErr in
-                    completion(batchErr)
+                // Duration = override or default
+                let duration = questDef.timeToCompleteOverride
+                    ?? system.defaultTimeToComplete
+                let expDate = nextStart.addingTimeInterval(duration)
+
+                let questDocRef = questDefsColl.document(questDef.id)
+                let dataMap: [String: Any] = [
+                    "questRef": questDocRef,
+                    "questRank": nextRank,
+                    "status": QuestProgressStatus.available.rawValue,
+                    "availableAt": Timestamp(date: nextStart),
+                    "expirationTime": Timestamp(date: expDate),
+                    "failedCount": 0
+                ]
+                batch.setData(dataMap, forDocument: newQPRef)
+            }
+            batch.commit { err in
+                if let err = err {
+                    print("Error unlocking next rank:", err)
                 }
             }
         }
     }
 }
+
