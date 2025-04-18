@@ -2,7 +2,7 @@
 //  UserQuestService.swift
 //  SystemAdept
 //
-//  Created by Thomas Akin on 4/14/25.
+//  Created by Your Name on 2025-04-18.
 //
 
 import Foundation
@@ -46,7 +46,7 @@ final class UserQuestService {
     private let db = Firestore.firestore()
     private init() {}
 
-    /// Marks a quest completed, grants aura (with debuff), then unlocks next rank.
+    /// Marks a quest completed, grants aura with debuff, then unlocks next rank.
     func completeQuest(
         aqsId: String,
         progress: QuestProgress,
@@ -61,22 +61,24 @@ final class UserQuestService {
             .collection("activeQuestSystems").document(aqsId)
             .collection("questProgress").document(progress.id!)
 
-        // Compute debuffed aura gain
+        // Debuff calculation
         let failedCount = Double(progress.failedCount)
-        let debuffFactor = quest.questRepeatDebuffOverride ?? 1.0
+        let debuffFactor = quest.questRepeatDebuffOverride
+                         ?? system.defaultRepeatDebuff
+                         ?? 1.0
         let multiplier = pow(debuffFactor, failedCount)
         let auraGain = quest.questAuraGranted * multiplier
 
         let userRef = db.collection("users").document(uid)
-
         let batch = db.batch()
-        // 1) mark quest completed
+
+        // 1) mark quest as completed
         batch.updateData([
             "status": QuestProgressStatus.completed.rawValue,
             "completedAt": Timestamp(date: Date())
         ], forDocument: qpRef)
 
-        // 2) increment user aura
+        // 2) add aura
         batch.updateData([
             "aura": FieldValue.increment(auraGain)
         ], forDocument: userRef)
@@ -86,6 +88,7 @@ final class UserQuestService {
                 print("Error completing quest:", err)
                 return
             }
+            // unlock next rank
             self?.computeAndUnlockNextRank(
                 aqsId: aqsId,
                 system: system,
@@ -115,71 +118,62 @@ final class UserQuestService {
                 return
             }
 
-            // Parse progress items with raw rank and expiration
-            struct Prog { let progress: QuestProgress; let rank: Int; let expiration: Date }
+            struct Prog {
+                let progress: QuestProgress
+                let rank: Int
+                let expiration: Date
+            }
             var items: [Prog] = []
+
             for docSnap in docs {
                 let data = docSnap.data()
-                // Decode QuestProgress
                 guard let qp = try? docSnap.data(as: QuestProgress.self) else { continue }
-                // Parse rank from raw data
                 let rankVal: Int = {
                     if let i = data["questRank"] as? Int { return i }
                     if let s = data["questRank"] as? String, let i = Int(s) { return i }
                     return 0
                 }()
-                // Parse expiration timestamp
                 guard let ts = data["expirationTime"] as? Timestamp else { continue }
-                let expDate = ts.dateValue()
-                items.append(Prog(progress: qp, rank: rankVal, expiration: expDate))
+                items.append(Prog(progress: qp, rank: rankVal, expiration: ts.dateValue()))
             }
 
-            // Group by rank
             let grouped = Dictionary(grouping: items, by: { $0.rank })
             let sortedRanks = grouped.keys.sorted()
-
-            // Find max fully-completed rank
-            var completedMaxRank: Int? = nil
+            var completedRank: Int? = nil
             for rank in sortedRanks {
                 let group = grouped[rank]!
                 if group.allSatisfy({ $0.progress.status == .completed }) {
-                    completedMaxRank = rank
+                    completedRank = rank
                 }
             }
-            guard let lastRank = completedMaxRank else { return }
+            guard let lastRank = completedRank else { return }
             let nextRank = lastRank + 1
 
-            // Early exit if no next-rank quests
             guard let nextQuests = system.questsByRank[nextRank], !nextQuests.isEmpty else {
                 return
             }
 
-            // Compute latest expiration in lastRank
             let lastExp = grouped[lastRank]!
                 .map({ $0.expiration })
                 .max() ?? Date()
-
-            // Calculate next start respecting rest cycle
             let nextStart = calculateNextStart(
                 after: lastExp,
                 restCycle: user.restCycle
             )
 
-            // Prepare Firestore references
-            let systemDocRef = db
-                .collection("questSystems").document(system.id)
+            let systemDocRef = db.collection("questSystems").document(system.id)
             let questDefsColl = systemDocRef.collection("quests")
 
-            // Batch-unlock next rank quests
             let batch = db.batch()
             for questDef in nextQuests {
                 let newDocID = "\(questDef.questName)_\(nextRank)"
                 let newQPRef = qpColl.document(newDocID)
 
-                // Duration = override or default
-                let duration = questDef.timeToCompleteOverride
-                    ?? system.defaultTimeToComplete
-                let expDate = nextStart.addingTimeInterval(duration)
+                // **Use config.seconds to get a TimeInterval**
+                let config = questDef.timeToCompleteOverride
+                             ?? system.defaultTimeToComplete
+                let durationSeconds = config.seconds
+                let expDate = nextStart.addingTimeInterval(durationSeconds)
 
                 let questDocRef = questDefsColl.document(questDef.id)
                 let dataMap: [String: Any] = [

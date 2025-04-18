@@ -12,8 +12,8 @@ import Combine
 
 /// Combines QuestProgress with its definition and parent system.
 struct ActiveQuest: Identifiable {
-    let id: String              // questProgress document ID
-    let aqsId: String           // activeQuestSystem ID
+    let id: String
+    let aqsId: String
     let systemName: String
     let progress: QuestProgress
     let quest: Quest
@@ -39,8 +39,7 @@ final class MyQuestsViewModel: ObservableObject {
 
     private func listenActiveSystems() {
         guard let uid = Auth.auth().currentUser?.uid else { return }
-        let aqsColl = db
-            .collection("users").document(uid)
+        let aqsColl = db.collection("users").document(uid)
             .collection("activeQuestSystems")
 
         aqsListener = aqsColl.addSnapshotListener { [weak self] snap, err in
@@ -50,16 +49,16 @@ final class MyQuestsViewModel: ObservableObject {
                 return
             }
             let docs = snap?.documents ?? []
+            let currentIds = Set(docs.map { $0.documentID })
 
             // Remove outdated listeners
-            let currentIds = Set(docs.map { $0.documentID })
             for removed in qpListeners.keys where !currentIds.contains(removed) {
                 qpListeners[removed]?.remove()
                 qpListeners.removeValue(forKey: removed)
                 systemQuests.removeValue(forKey: removed)
             }
 
-            // Attach to new systems
+            // Attach listeners for new systems
             for doc in docs {
                 let aqsId = doc.documentID
                 if qpListeners[aqsId] == nil {
@@ -76,8 +75,7 @@ final class MyQuestsViewModel: ObservableObject {
 
     private func listenQuestProgress(for aqsId: String, systemName: String) {
         guard let uid = Auth.auth().currentUser?.uid else { return }
-        let qpColl = db
-            .collection("users").document(uid)
+        let qpColl = db.collection("users").document(uid)
             .collection("activeQuestSystems").document(aqsId)
             .collection("questProgress")
 
@@ -86,8 +84,7 @@ final class MyQuestsViewModel: ObservableObject {
             QuestProgressStatus.completed.rawValue
         ]
 
-        let listener = qpColl
-            .whereField("status", in: statuses)
+        let listener = qpColl.whereField("status", in: statuses)
             .order(by: "availableAt")
             .addSnapshotListener { [weak self] snap, err in
                 guard let self = self else { return }
@@ -106,9 +103,9 @@ final class MyQuestsViewModel: ObservableObject {
                     qp.questRef.getDocument { qSnap, _ in
                         defer { group.leave() }
                         guard let qSnap = qSnap,
-                              let qData = qSnap.data(),
-                              let quest = Quest(from: qData, id: qSnap.documentID)
-                        else { return }
+                              let qData = qSnap.data() else { return }
+                        // directly create Quest; initializer is non-optional
+                        let quest = Quest(from: qData, id: qSnap.documentID)
                         list.append(ActiveQuest(
                             id: qpId,
                             aqsId: aqsId,
@@ -136,20 +133,19 @@ final class MyQuestsViewModel: ObservableObject {
         }
     }
 
-    /// Completes a quest, applies aura gain with debuff multiplier.
+    /// Marks an available quest completed, grants aura, and updates Firestore
     func complete(_ aq: ActiveQuest) {
         guard let uid = Auth.auth().currentUser?.uid else { return }
-        let qpRef = db
-            .collection("users").document(uid)
+        let qpRef = db.collection("users").document(uid)
             .collection("activeQuestSystems").document(aq.aqsId)
             .collection("questProgress").document(aq.id)
         let userRef = db.collection("users").document(uid)
 
-        // Debuff multiplier based on failedCount
+        // Debuff aura calculation
         let failed = Double(aq.progress.failedCount)
         let debuff = aq.quest.questRepeatDebuffOverride ?? 1.0
-        let multiplier = pow(debuff, failed)
-        let auraGain = aq.quest.questAuraGranted * multiplier
+        let mult = pow(debuff, failed)
+        let auraGain = aq.quest.questAuraGranted * mult
 
         let batch = db.batch()
         batch.updateData([
@@ -159,7 +155,6 @@ final class MyQuestsViewModel: ObservableObject {
         batch.updateData([
             "aura": FieldValue.increment(auraGain)
         ], forDocument: userRef)
-
         batch.commit { [weak self] err in
             if let err = err {
                 self?.errorMessage = err.localizedDescription
@@ -167,18 +162,17 @@ final class MyQuestsViewModel: ObservableObject {
         }
     }
 
-    /// Restarts an expired quest, increments failedCount, resets timer, and returns true if successful.
+    /// Restarts an expired quest, increments failedCount, resets timers.
     func restart(_ aq: ActiveQuest, completion: @escaping (Bool) -> Void) {
         guard let uid = Auth.auth().currentUser?.uid else {
             completion(false); return
         }
-        let qpRef = db
-            .collection("users").document(uid)
+        let qpRef = db.collection("users").document(uid)
             .collection("activeQuestSystems").document(aq.aqsId)
             .collection("questProgress").document(aq.id)
 
         let oldAvail = aq.progress.availableAt ?? Date()
-        let oldExp   = aq.progress.expirationTime ?? oldAvail
+        let oldExp = aq.progress.expirationTime ?? oldAvail
         let duration = oldExp.timeIntervalSince(oldAvail)
         let now = Date()
         let newExp = now.addingTimeInterval(duration)
