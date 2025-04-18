@@ -42,15 +42,27 @@ final class AuthViewModel: ObservableObject {
             .collection("users")
             .document(uid)
         userListener = ref.addSnapshotListener { [weak self] snap, error in
-            if let error = error {
-                print("Error listening to user profile:", error)
-                return
-            }
             guard let snap = snap else { return }
-            // Always construct an AppUser, even if some fields are missing
             let profile = AppUser(from: snap)
             DispatchQueue.main.async {
                 self?.userProfile = profile
+            }
+
+            // if Firestore doc didn’t already have rest‑cycle fields, write our defaults
+            let raw = snap.data() ?? [:]
+            if raw["restStartHour"] == nil || raw["restEndHour"] == nil {
+                let uid = snap.documentID
+                UserProfileService.shared.updateRestCycle(
+                    startHour:   22,
+                    startMinute: 0,
+                    endHour:     6,
+                    endMinute:   0,
+                    for: uid
+                ) { err in
+                    if let err = err {
+                        print("⚠️ failed to seed restCycle:", err)
+                    }
+                }
             }
         }
     }

@@ -22,6 +22,10 @@ struct AppUser: Identifiable {
     let skillPoints: Int
     let agility: Agility
     let strength: Strength
+    let restStartHour: Int
+    let restStartMinute: Int
+    let restEndHour: Int
+    let restEndMinute: Int
 
     struct Agility {
         let speed: Int
@@ -65,6 +69,29 @@ struct AppUser: Identifiable {
             core: AppUser.intVal(st["core"]),
             lowerBody: AppUser.intVal(st["lowerBody"]),
             upperBody: AppUser.intVal(st["upperBody"]) )
+        
+        // ─── parse rest cycle or fall back to defaults ─────────────────
+        if let h = data["restStartHour"] as? Int {
+            self.restStartHour = h
+        } else {
+            self.restStartHour = 22
+        }
+        if let m = data["restStartMinute"] as? Int {
+            self.restStartMinute = m
+        } else {
+            self.restStartMinute = 0
+        }
+        if let h2 = data["restEndHour"] as? Int {
+            self.restEndHour = h2
+        } else {
+            self.restEndHour = 6
+        }
+        if let m2 = data["restEndMinute"] as? Int {
+            self.restEndMinute = m2
+        } else {
+            self.restEndMinute = 0
+        }
+        
     }
 
     /// Helper to convert Int, Double, or String to Int, defaulting to 0.

@@ -5,23 +5,16 @@
 //  Created by Thomas Akin on 3/30/25.
 //
 
-
 import Foundation
 
 // MARK: - User Profile Model
 
 struct UserProfile: Codable, Identifiable {
-    // The document ID will be the user's UID.
     var id: String
-    // Login email address (read-only)
-    let email: String
-    // Editable user name (defaults to first part of email)
+    var email: String
     var name: String
-    // Read-only values
-    let aura: Int        // Default: 0
-    let skillPoints: String  // Default: "--"
-    
-    // Metrics
+    var aura: Int
+    var skillPoints: String
     var strength: StrengthMetrics
     var agility: AgilityMetrics
     var stamina: Int
@@ -29,6 +22,16 @@ struct UserProfile: Codable, Identifiable {
     var focus: Int
     var discipline: Int
     var initiative: Int
+
+    // ─── Newly added ────────────────────────────
+    /// Hour in 24‑hour time (0–23)
+    var restStartHour: Int = 22
+    var restStartMinute: Int = 0
+    var restEndHour: Int = 6
+    var restEndMinute: Int = 0
+    // ─────────────────────────────────────────────
+
+    // ... your existing init/from–dictionary code ...
 }
 
 struct StrengthMetrics: Codable {

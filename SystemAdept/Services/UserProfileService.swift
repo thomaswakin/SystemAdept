@@ -15,6 +15,26 @@ class UserProfileService {
     
     private init() {}
     
+    /// Updates just the rest‑cycle fields in the user’s profile document.
+    func updateRestCycle(
+        startHour: Int,
+        startMinute: Int,
+        endHour: Int,
+        endMinute: Int,
+        for uid: String,
+        completion: @escaping (Error?) -> Void
+    ) {
+        let data: [String: Any] = [
+            "restStartHour":   startHour,
+            "restStartMinute": startMinute,
+            "restEndHour":     endHour,
+            "restEndMinute":   endMinute
+        ]
+        db.collection("users")
+          .document(uid)
+          .updateData(data, completion: completion)
+    }
+    
     // Save a new user profile (for a new user)
     func createUserProfile(for user: UserProfile, completion: @escaping (Error?) -> Void) {
         do {
