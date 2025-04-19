@@ -5,21 +5,20 @@
 //  Created by Thomas Akin on 4/18/25.
 //
 
-
-//
-//  RestCycleSettingsView.swift
-//  SystemAdept
-//
-
 import SwiftUI
 import FirebaseAuth
 
 struct RestCycleSettingsView: View {
+    // MARK: Environment
     @Environment(\.presentationMode) private var presentationMode
+    @EnvironmentObject private var authVM: AuthViewModel
+
+    // MARK: State
     @State private var startTime = Date()
     @State private var endTime   = Date()
     @State private var errorMsg  = ""
 
+    // convenience
     private var uid: String? { Auth.auth().currentUser?.uid }
 
     var body: some View {
@@ -30,67 +29,72 @@ struct RestCycleSettingsView: View {
                     selection: $startTime,
                     displayedComponents: .hourAndMinute
                 )
-                .datePickerStyle(.wheel)
             }
+
             Section(header: Text("Rest End")) {
                 DatePicker(
                     "End Time",
                     selection: $endTime,
                     displayedComponents: .hourAndMinute
                 )
-                .datePickerStyle(.wheel)
             }
+
             if !errorMsg.isEmpty {
-                Section { Text(errorMsg).foregroundColor(.red) }
+                Text(errorMsg)
+                    .foregroundColor(.red)
             }
-            Section {
-                Button("Save") {
-                    saveCycle()
-                }
+
+            Button("Save") {
+                saveRestCycle()
             }
+            .disabled(uid == nil)
         }
         .navigationTitle("Rest Cycle")
-        .onAppear(perform: loadCurrentCycle)
+        .onAppear {
+            loadCurrentValues()
+        }
     }
 
-    private func loadCurrentCycle() {
-        guard
-            let user = AuthViewModel().userProfile
-        else { return }
-        let cal = Calendar.current
-        if let d1 = cal.date(
-            bySettingHour:   user.restStartHour,
-                         minute: user.restStartMinute,
-                         second: 0, of: Date()
-        ) {
+    // MARK: Helpers
+
+    /// Pull `restStartHour`/`restStartMinute` and `restEndHour`/`restEndMinute`
+    /// from the signed‑in user’s profile and populate our pickers.
+    private func loadCurrentValues() {
+        guard let profile = authVM.userProfile else { return }
+
+        // build a Date just for the time of day
+        var comps = Calendar.current.dateComponents([.year, .month, .day], from: Date())
+        comps.hour   = profile.restStartHour
+        comps.minute = profile.restStartMinute
+        if let d1 = Calendar.current.date(from: comps) {
             startTime = d1
         }
-        if let d2 = cal.date(
-            bySettingHour:   user.restEndHour,
-                         minute: user.restEndMinute,
-                         second: 0, of: Date()
-        ) {
+
+        comps.hour   = profile.restEndHour
+        comps.minute = profile.restEndMinute
+        if let d2 = Calendar.current.date(from: comps) {
             endTime = d2
         }
     }
 
-    private func saveCycle() {
-        guard let uid = uid else {
-            errorMsg = "Not logged in"
-            return
-        }
-        let cal = Calendar.current
-        let h1 = cal.component(.hour, from: startTime)
-        let m1 = cal.component(.minute, from: startTime)
-        let h2 = cal.component(.hour, from: endTime)
-        let m2 = cal.component(.minute, from: endTime)
+    /// Extract hour/minute from our pickers and send to Firestore.
+    private func saveRestCycle() {
+        guard let uid = uid else { return }
+
+        let c1 = Calendar.current.dateComponents([.hour, .minute], from: startTime)
+        let c2 = Calendar.current.dateComponents([.hour, .minute], from: endTime)
+
+        guard
+            let h1 = c1.hour,   let m1 = c1.minute,
+            let h2 = c2.hour,   let m2 = c2.minute
+        else { return }
 
         UserProfileService.shared.updateRestCycle(
             startHour:   h1,
             startMinute: m1,
             endHour:     h2,
             endMinute:   m2,
-            for: uid
+            for:         uid
         ) { error in
             if let error = error {
                 errorMsg = error.localizedDescription
