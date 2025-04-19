@@ -42,7 +42,9 @@ struct MyQuestsView: View {
                 return all.filter { $0.progress.status == .completed }
             default:
                 return all.filter {
-                    $0.progress.status == .available && filter.matches($0.progress.expirationTime)
+                    ( $0.progress.status == .available
+                    || $0.progress.status == .failed )
+                    && filter.matches($0.progress.expirationTime)
                 }
             }
         }()
@@ -117,7 +119,23 @@ struct MyQuestsView: View {
                                         .buttonStyle(.bordered)
                                         .controlSize(.small)
                                     }
-                                } else {
+                                    
+                                } else if aq.progress.status == .failed {
+                                    // EXPIRED → show Restart
+                                    Button("Restart") {
+                                        vm.restart(aq) { success in
+                                            if success {
+                                                withAnimation { showDebuffMessage = true }
+                                                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                                                    withAnimation { showDebuffMessage = false }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    .buttonStyle(.bordered)
+                                    .controlSize(.small)
+                                }
+                                else {
                                     Text("Completed")
                                         .font(.caption)
                                         .foregroundColor(.secondary)

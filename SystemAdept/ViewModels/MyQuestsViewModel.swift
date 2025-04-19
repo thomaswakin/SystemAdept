@@ -83,7 +83,8 @@ final class MyQuestsViewModel: ObservableObject {
 
         let statuses = [
             QuestProgressStatus.available.rawValue,
-            QuestProgressStatus.completed.rawValue
+            QuestProgressStatus.completed.rawValue,
+            QuestProgressStatus.failed.rawValue
         ]
 
         let listener = qpColl

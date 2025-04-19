@@ -5,65 +5,88 @@
 //  Created by Thomas Akin on 4/14/25.
 //
 
-
 import SwiftUI
 
 struct QuestQueueView: View {
-  let activeSystem: ActiveQuestSystem
-  @StateObject private var vm = QuestQueueViewModel()
+    let activeSystem: ActiveQuestSystem
+    @StateObject private var viewModel: QuestQueueViewModel
+    @State private var showCompletionAlert = false
 
-  // Alert state
-  @State private var showCompletionAlert = false
+    init(activeSystem: ActiveQuestSystem) {
+        self.activeSystem = activeSystem
+        _viewModel = StateObject(
+            wrappedValue: QuestQueueViewModel(activeSystem: activeSystem)
+        )
+    }
 
-  var body: some View {
-    VStack(spacing: 20) {
-      if let quest = vm.questDetail, let qp = vm.current {
-        Text(quest.questName)
-          .font(.title2).bold()
-        Text(quest.questPrompt)
-          .multilineTextAlignment(.center)
-          .padding()
-
-        Text("Status: \(qp.status.rawValue.capitalized)")
-          .font(.subheadline)
-
-        Text("Time left: \(Int(vm.countdown))s")
-          .font(.headline)
-
-        HStack(spacing: 40) {
-          Button("Completed") {
-            vm.completeCurrent()
-          }
-          .disabled(vm.countdown <= 0)
-
-          Button("Pause") {
-            vm.pauseCurrent()
-          }
+    var body: some View {
+        VStack(spacing: 20) {
+            if let qp = viewModel.current,
+               let quest = viewModel.questDetail
+            {
+                switch qp.status {
+                case .available:
+                    availableQuestView(quest: quest)
+                case .failed:
+                    failedQuestView(quest: quest, progress: qp)
+                default:
+                    noQuestView()
+                }
+            } else {
+                noQuestView()
+            }
         }
-      } else {
-        Text("No quests available right now.")
-          .foregroundColor(.gray)
-      }
-      Spacer()
+        .padding()
+        .onAppear { viewModel.refreshAvailableQuests() }
     }
-    .padding()
-    .navigationTitle("Quest Queue")
-    .onAppear {
-      vm.start(for: activeSystem)
-    }
-    // Listen for the aura‑gain event to show the alert
-    .onReceive(vm.$lastAuraGained.compactMap { $0 }) { aura in
-      showCompletionAlert = true
-    }
-    .alert("Quest Complete!",
-           isPresented: $showCompletionAlert) {
-      Button("OK") { showCompletionAlert = false }
-    } message: {
-      if let aura = vm.lastAuraGained,
-         let questName = vm.questDetail?.questName {
-        Text("\"\(questName)\" completed.\nAura increased by \(aura).")
-      }
-    }
-  }
-}
 
+    @ViewBuilder
+    private func availableQuestView(quest: Quest) -> some View {
+        VStack(spacing: 16) {
+            Text(quest.questName)
+                .font(.title2).bold()
+            Text(quest.questPrompt)
+                .multilineTextAlignment(.center)
+            Text("Time left: \(Int(viewModel.countdown))s")
+                .font(.headline)
+            Button("Completed") {
+                viewModel.completeCurrent()
+                showCompletionAlert = true
+            }
+            .buttonStyle(.borderedProminent)
+        }
+        .alert("Quest Complete!", isPresented: $showCompletionAlert) {
+            Button("OK", role: .cancel) {
+                showCompletionAlert = false
+            }
+        } message: {
+            Text("\"\(quest.questName)\" completed.")
+        }
+    }
+
+    @ViewBuilder
+    private func failedQuestView(
+        quest: Quest,
+        progress: QuestProgress
+    ) -> some View {
+        VStack(spacing: 16) {
+            Text(quest.questName)
+                .font(.title2).bold()
+                .foregroundColor(.red)
+            Text("This quest has expired.")
+                .foregroundColor(.secondary)
+            Text("Debuff count: \(progress.failedCount)")
+                .font(.subheadline)
+            Button("Restart Quest") {
+                viewModel.restartCurrent()
+            }
+            .buttonStyle(.bordered)
+        }
+    }
+
+    @ViewBuilder
+    private func noQuestView() -> some View {
+        Text("No available quests")
+            .foregroundColor(.secondary)
+    }
+}
