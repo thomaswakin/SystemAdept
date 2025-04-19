@@ -38,6 +38,7 @@ final class MyQuestsViewModel: ObservableObject {
     }
 
     private func listenActiveSystems() {
+        print("MQVM: listenActiveSystems run")
         guard let uid = Auth.auth().currentUser?.uid else { return }
         let aqsColl = db
             .collection("users").document(uid)
@@ -76,6 +77,7 @@ final class MyQuestsViewModel: ObservableObject {
 
     private func listenQuestProgress(for aqsId: String, systemName: String) {
         guard let uid = Auth.auth().currentUser?.uid else { return }
+        print("MWVM listenQuestProgress for \(aqsId) system \(systemName) run")
         let qpColl = db
             .collection("users").document(uid)
             .collection("activeQuestSystems").document(aqsId)
@@ -130,6 +132,7 @@ final class MyQuestsViewModel: ObservableObject {
     }
 
     private func recomputeActiveQuests() {
+        print("MQVM recompute active quests run")
         let now = Date()
         let all = systemQuests.values.flatMap { $0 }
         activeQuests = all.sorted {
@@ -140,6 +143,7 @@ final class MyQuestsViewModel: ObservableObject {
     /// Completes a quest, applies aura gain with debuff multiplier.
     func complete(_ aq: ActiveQuest) {
         guard let uid = Auth.auth().currentUser?.uid else { return }
+        print("MQVM complete run")
         let qpRef = db
             .collection("users").document(uid)
             .collection("activeQuestSystems").document(aq.aqsId)
@@ -173,6 +177,7 @@ final class MyQuestsViewModel: ObservableObject {
         guard let uid = Auth.auth().currentUser?.uid else {
             completion(false); return
         }
+        print("MQVM restart run")
         let qpRef = db
             .collection("users").document(uid)
             .collection("activeQuestSystems").document(aq.aqsId)

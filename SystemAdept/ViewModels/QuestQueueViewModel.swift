@@ -47,6 +47,7 @@ final class QuestQueueViewModel: ObservableObject {
 
     /// Manually complete the current quest.
     func completeCurrent() {
+        print("completeCurrent run")
         guard
             let uid = Auth.auth().currentUser?.uid,
             let qp  = current,
@@ -65,6 +66,7 @@ final class QuestQueueViewModel: ObservableObject {
 
     /// Mark the current quest as failed (expired).
     func failCurrent() {
+        print("failCurrent run")
         guard
             let uid = Auth.auth().currentUser?.uid,
             let qp  = current,
@@ -83,6 +85,7 @@ final class QuestQueueViewModel: ObservableObject {
 
     /// Restart a failed quest, resetting its availableAt and expirationTime.
     func restartCurrent() {
+        print("restartCurrent run")
         guard
             let qp   = current,
             let qpId = qp.id,
@@ -116,6 +119,7 @@ final class QuestQueueViewModel: ObservableObject {
             let now = Date()
             let exp = now.addingTimeInterval(duration)
             let ref = self.userQuestProgressRef(aqsId: self.activeSystem.id, qpId: qpId)
+            print(" restartCurrent Update Data run")
             ref.updateData([
                 "status":         QuestProgressStatus.available.rawValue,
                 "availableAt":    Timestamp(date: now),
@@ -129,6 +133,7 @@ final class QuestQueueViewModel: ObservableObject {
     // MARK: - Listener
 
     private func setupListener() {
+        print("setupListener run")
         guard let uid = Auth.auth().currentUser?.uid else { return }
         let col = db
             .collection("users").document(uid)
@@ -180,6 +185,7 @@ final class QuestQueueViewModel: ObservableObject {
 
     /// Refresh questDetail then re‑fire listener to pick up status changes.
     private func fetchQuestDetailAndRefresh() {
+        print("fetchQuestDetailAndRefresh run")
         if let qp = current {
             fetchQuestDetail(for: qp)
         }
@@ -187,6 +193,7 @@ final class QuestQueueViewModel: ObservableObject {
     }
 
     private func fetchQuestDetail(for qp: QuestProgress) {
+        print("fetchQuestDetail run")
         qp.questRef.getDocument { [weak self] snap, err in
             guard let self = self else { return }
             if let e = err {
@@ -207,6 +214,7 @@ final class QuestQueueViewModel: ObservableObject {
     // MARK: - Countdown
 
     private func startTimer(until end: Date) {
+        print("startTimer run")
         timer?.invalidate()
         countdown = max(0, end.timeIntervalSinceNow)
         timer = Timer.scheduledTimer(
@@ -222,6 +230,7 @@ final class QuestQueueViewModel: ObservableObject {
     }
 
     private func stopTimer() {
+        print("stopTimer run")
         timer?.invalidate()
         timer = nil
         countdown = 0
@@ -231,6 +240,7 @@ final class QuestQueueViewModel: ObservableObject {
 
     /// Flip any locked quests whose `availableAt` ≤ now → available, then unlock next rank.
     func refreshAvailableQuests() {
+        print("refreshAvailableQuests run")
         guard let uid = Auth.auth().currentUser?.uid else { return }
         let now = Date()
         let col = db
@@ -257,6 +267,7 @@ final class QuestQueueViewModel: ObservableObject {
     }
 
     private func startPeriodicRefresh() {
+        print("startPeriodicRefresh run")
         periodicTimer?.invalidate()
         periodicTimer = Timer.scheduledTimer(
             withTimeInterval: 30, repeats: true
@@ -268,10 +279,12 @@ final class QuestQueueViewModel: ObservableObject {
     // MARK: - Rest & Progression
 
     private func adjustedDateConsideringRest(
+        
         _ baseDate: Date,
         restStartHour: Int, restStartMinute: Int,
         restEndHour: Int,   restEndMinute: Int
     ) -> Date {
+        print("adjustDateConsderinRest run")
         let cal = Calendar.current
         let comps = cal.dateComponents([.hour, .minute], from: baseDate)
         guard let hour = comps.hour, let minute = comps.minute else { return baseDate }
@@ -308,6 +321,7 @@ final class QuestQueueViewModel: ObservableObject {
     }
 
     private func unlockNextRank() {
+        print("unlockNextRank run")
         let uid   = Auth.auth().currentUser!.uid
         let aqsId = activeSystem.id
         let sysId = activeSystem.questSystemRef.documentID
