@@ -14,7 +14,7 @@ import Combine
 /// surfaces failed quests first for restart,
 /// then available quests,
 /// marks expired quests as failed,
-/// unlocks next‑rank quests on completion,
+/// unlocks next‑rank quests on completion (with optional acceleration),
 /// and auto‑unlocks based on `availableAt` + rest cycle.
 final class QuestQueueViewModel: ObservableObject {
     // MARK: - Published
@@ -22,17 +22,34 @@ final class QuestQueueViewModel: ObservableObject {
     @Published var questDetail: Quest?
     @Published var countdown: TimeInterval = 0
     @Published var errorMessage: String?
-
+    
+    // Prompt state for accelerating to next rank
+    @Published var showAcceleratePrompt: Bool = false
+    @Published var pendingNextRankQuestIDs: [String] = []
+    
+    // Store latest expiration among the just‑completed rank
+    private var latestExpirationForRank: Date?
+    
     // MARK: - Private
     private let db = Firestore.firestore()
     private var listener: ListenerRegistration?
     private var timer: Timer?
     private var periodicTimer: Timer?
     private let activeSystem: ActiveQuestSystem
+    
+    /// Keep the most recent quest progress list for periodic unlocking
+    private var lastProgressList: [QuestProgress] = []
+    
+    /// Cache Quest ID → Quest for quick lookups
+    private var questCache: [String: Quest] = [:]
 
     // MARK: - Init / Deinit
     init(activeSystem: ActiveQuestSystem) {
         self.activeSystem = activeSystem
+        
+        // Preload all quest definitions into the cache
+        self.preloadAllQuests()
+        
         setupListener()
         startPeriodicRefresh()
     }
@@ -49,18 +66,22 @@ final class QuestQueueViewModel: ObservableObject {
     func completeCurrent() {
         print("completeCurrent run")
         guard
-            let uid = Auth.auth().currentUser?.uid,
-            let qp = current,
-            let qpId = qp.id
+            let uid   = Auth.auth().currentUser?.uid,
+            let qp    = current,
+            let qpId  = qp.id
         else { return }
+
         let ref = userQuestProgressRef(aqsId: activeSystem.id, qpId: qpId)
         ref.updateData([
             "status":      QuestProgressStatus.completed.rawValue,
             "completedAt": Timestamp(date: Date())
         ]) { [weak self] err in
-            if let e = err { self?.errorMessage = e.localizedDescription }
-            self?.unlockNextRank()
-            self?.fetchQuestDetailAndRefresh()
+            if let e = err {
+                self?.errorMessage = e.localizedDescription
+                return
+            }
+            // **New**: Prepare next‑rank quests and show prompt if eligible
+            self?.prepareNextRankQuests(afterCompleting: qp)
         }
     }
 
@@ -68,9 +89,9 @@ final class QuestQueueViewModel: ObservableObject {
     func failCurrent() {
         print("failCurrent run")
         guard
-            let uid = Auth.auth().currentUser?.uid,
-            let qp = current,
-            let qpId = qp.id
+            let uid   = Auth.auth().currentUser?.uid,
+            let qp    = current,
+            let qpId  = qp.id
         else { return }
         let newCount = qp.failedCount + 1
         let ref = userQuestProgressRef(aqsId: activeSystem.id, qpId: qpId)
@@ -83,49 +104,56 @@ final class QuestQueueViewModel: ObservableObject {
         fetchQuestDetailAndRefresh()
     }
 
-    /// Restart a failed quest, resetting its availableAt and expirationTime.
+    /// Restart a failed quest by setting its availability and expiration using the rank‑based duration.
     func restartCurrent() {
         print("restartCurrent run")
         guard
-            let qp = current,
-            let qpId = qp.id,
-            let quest = questDetail
+            let qp   = current,
+            let qpId = qp.id
         else { return }
 
-        activeSystem.questSystemRef.getDocument { snap, _ in
-            let data = snap?.data() ?? [:]
-            let defaultTTC: TimeIntervalConfig
-            if
-                let dict = data["defaultTimeToComplete"] as? [String:Any],
-                let a = dict["amount"] as? Double,
-                let u = dict["unit"] as? String
-            {
-                defaultTTC = TimeIntervalConfig(amount: a, unit: u)
-            } else {
-                defaultTTC = TimeIntervalConfig(amount: 0, unit: "seconds")
-            }
+        // 1) Lookup the Quest metadata from our cache
+        guard let quest = questCache[qpId] else {
+            print("Restart error: missing quest details in cache for id \(qpId)")
+            return
+        }
 
-            let cfg = quest.timeToCompleteOverride ?? defaultTTC
-            let duration: TimeInterval = {
-                switch cfg.unit {
-                case "minutes": return cfg.amount * 60
-                case "hours":   return cfg.amount * 3600
-                case "days":    return cfg.amount * 86400
-                case "weeks":   return cfg.amount * 604800
-                case "months":  return cfg.amount * 2592000
-                default:        return cfg.amount
+        // 2) Determine the duration (seconds)
+        let duration: TimeInterval = {
+            if let override = quest.timeToCompleteOverride {
+                switch override.unit {
+                case "minutes": return override.amount * 60
+                case "hours":   return override.amount * 3600
+                case "days":    return override.amount * 86400
+                case "weeks":   return override.amount * 604800
+                case "months":  return override.amount * 2592000
+                default:        return override.amount
                 }
-            }()
-            let now = Date()
-            let exp = now.addingTimeInterval(duration)
-            let ref = self.userQuestProgressRef(aqsId: self.activeSystem.id, qpId: qpId)
-            print(" restartCurrent Update Data run")
-            ref.updateData([
-                "status":         QuestProgressStatus.available.rawValue,
-                "availableAt":    Timestamp(date: now),
-                "expirationTime": Timestamp(date: exp)
-            ]) { err in
-                if let e = err { print("❌ restartCurrent error:", e) }
+            } else {
+                return defaultDuration(forRank: quest.questRank)
+            }
+        }()
+
+        // 3) Sanity‑check the duration
+        guard duration > 0 else {
+            print("Restart error: computed duration is zero for quest \(qpId)")
+            return
+        }
+
+        // 4) Compute new availableAt and expirationTime
+        let now = Date()
+        let exp = now.addingTimeInterval(duration)
+        print("Restarting quest \(qpId): availableAt = \(now), expirationTime = \(exp) (duration = \(duration)s)")
+
+        // 5) Write it back to Firestore
+        let ref = userQuestProgressRef(aqsId: activeSystem.id, qpId: qpId)
+        ref.updateData([
+            "status":         QuestProgressStatus.available.rawValue,
+            "availableAt":    Timestamp(date: now),
+            "expirationTime": Timestamp(date: exp)
+        ]) { err in
+            if let err = err {
+                print("❌ restartCurrent error: \(err.localizedDescription)")
             }
         }
     }
@@ -136,23 +164,19 @@ final class QuestQueueViewModel: ObservableObject {
         print("setupListener run")
         guard let uid = Auth.auth().currentUser?.uid else { return }
 
-        // 1) Reference the user's questProgress subcollection
         let progressCollection = db
             .collection("users").document(uid)
             .collection("activeQuestSystems").document(activeSystem.id)
             .collection("questProgress")
 
-        // 2) Detach any existing listener
         listener?.remove()
-
-        // 3) Attach a *light* closure that just forwards to processSnapshot
         listener = progressCollection.addSnapshotListener { [weak self] snap, error in
             guard let self = self else { return }
             self.processSnapshot(snap, error)
         }
     }
 
-    /// Handles snapshot updates outside of the listener closure to simplify type-checking.
+    /// Handles snapshot updates outside of the listener closure to simplify type‑checking.
     private func processSnapshot(_ snap: QuerySnapshot?, _ error: Error?) {
         // 1) Error handling
         if let error = error {
@@ -164,32 +188,31 @@ final class QuestQueueViewModel: ObservableObject {
         // 2) Parse all QuestProgress entries
         var progressList: [QuestProgress] = []
         for doc in docs {
-            do {
-                let qp = try QuestProgress.fromSnapshot(doc)
+            if let qp = try? QuestProgress.fromSnapshot(doc) {
                 progressList.append(qp)
-            } catch {
-                print("Parse error:", error)
             }
         }
 
         // 3) Expire any overdue quests
-        self.expireOverdueQuests(progressList, systemId: self.activeSystem.id)
+        expireOverdueQuests(progressList, systemId: activeSystem.id)
 
-        // 4) Pick the next “available” quest (no .active or .pending cases exist)
-        var nextQuest: QuestProgress?
+        // 4) Activate any now‑available quests
         for qp in progressList {
-            if qp.status == .available {
-                nextQuest = qp
-                break
+            if let avail = qp.availableAt, avail <= Date(), qp.status == .locked {
+                let ref = userQuestProgressRef(aqsId: activeSystem.id, qpId: qp.id!)
+                ref.updateData(["status": QuestProgressStatus.available.rawValue])
             }
         }
 
-        // 5) Update `current` and load details
-        if let next = nextQuest {
-            self.current = next
-            self.fetchQuestDetail(for: next)
+        // 5) Store for periodic review
+        lastProgressList = progressList
+
+        // 6) Update current quest display
+        if let next = progressList.first(where: { $0.status == .available }) {
+            current = next
+            fetchQuestDetail(for: next)
         } else {
-            self.current = nil
+            current = nil
         }
     }
 
@@ -220,41 +243,28 @@ final class QuestQueueViewModel: ObservableObject {
             self.questDetail = q
         }
     }
+
     // MARK: - Countdown
 
     private func startTimer(until end: Date) {
         print("startTimer run")
-        
-        // 1) Invalidate any existing timer and seed the initial countdown
         timer?.invalidate()
-        let initialRemaining = end.timeIntervalSinceNow
-        countdown = max(0, initialRemaining)
-        
-        // 2) Pull out the interval and repeats into their own variables
+        countdown = max(0, end.timeIntervalSinceNow)
+
         let interval: TimeInterval = 1
-        let shouldRepeat: Bool = true
-        
-        // 3) Define the block separately, capturing `end` and `self`
+        let shouldRepeat = true
         let callback: (Timer) -> Void = { [weak self] t in
             guard let self = self else { return }
-            
-            // Break up the math into two steps
             let remaining = end.timeIntervalSinceNow
             let clamped   = max(0, remaining)
             self.countdown = clamped
-            
             if clamped <= 0 {
                 t.invalidate()
                 self.failCurrent()
             }
         }
-        
-        // 4) Schedule the timer with our smaller pieces
-        timer = Timer.scheduledTimer(
-            withTimeInterval: interval,
-            repeats: shouldRepeat,
-            block: callback
-        )
+
+        timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: shouldRepeat, block: callback)
     }
 
     private func stopTimer() {
@@ -266,222 +276,204 @@ final class QuestQueueViewModel: ObservableObject {
 
     // MARK: - Periodic Refresh
 
-    /// Flip any locked quests whose `availableAt` ≤ now → available, then unlock next rank.
-    func refreshAvailableQuests() {
-        print("refreshAvailableQuests run")
-        guard let uid = Auth.auth().currentUser?.uid else { return }
-        let now = Date()
-        let col = db
-            .collection("users").document(uid)
-            .collection("activeQuestSystems").document(activeSystem.id)
-            .collection("questProgress")
-
-        col
-            .whereField("status", isEqualTo: QuestProgressStatus.locked.rawValue)
-            .whereField("availableAt", isLessThanOrEqualTo: Timestamp(date: now))
-            .getDocuments { [weak self] snap, err in
-                guard let self = self, err == nil else { return }
-                let batch = self.db.batch()
-                snap?.documents.forEach { doc in
-                    batch.updateData(
-                        ["status": QuestProgressStatus.available.rawValue],
-                        forDocument: doc.reference
-                    )
-                }
-                batch.commit { _ in
-                    self.unlockNextRank()
-                }
-            }
-    }
-
+    /// Flip any locked quests whose `availableAt` ≤ now → available, then unlock next rank automatically.
     private func startPeriodicRefresh() {
         print("startPeriodicRefresh run")
         periodicTimer?.invalidate()
-        periodicTimer = Timer.scheduledTimer(
-            withTimeInterval: 30, repeats: true
-        ) { [weak self] _ in
-            self?.refreshAvailableQuests()
+        periodicTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
+            guard let self = self else { return }
+            // 1) Refresh expirations & availability
+            self.processSnapshot(nil, nil)
+            // 2) Auto‑unlock next rank if a full rank is complete
+            self.periodicUnlockNextRank()
+        }
+    }
+    
+    // MARK: - New Loading Logic
+
+    /// Preload and cache all Quest definitions for this ActiveQuestSystem.
+    private func preloadAllQuests() {
+        let sysId = activeSystem.questSystemRef.documentID
+        db.collection("questSystems").document(sysId)
+          .collection("quests")
+          .getDocuments { [weak self] snap, error in
+            guard let self = self, let docs = snap?.documents else { return }
+            
+            for doc in docs {
+                // Use the failable initializer directly, avoiding ‘do/try’
+                if let q = Quest(from: doc.data(), id: doc.documentID) {
+                    // Store in cache using a plain String key
+                    let key = q.id
+                    self.questCache.updateValue(q, forKey: key)
+                } else {
+                    print("Quest cache error: failed to parse Quest for doc \(doc.documentID)")
+                }
+            }
+          }
+    }
+
+    // MARK: - New Next‑Rank Logic
+
+    /// Called after marking a quest completed: prepare and prompt to unlock next rank.
+    private func prepareNextRankQuests(afterCompleting qp: QuestProgress) {
+        let uid   = Auth.auth().currentUser!.uid
+        let aqsId = activeSystem.id
+
+        db.collection("users").document(uid)
+          .collection("activeQuestSystems").document(aqsId)
+          .collection("questProgress")
+          .getDocuments { [weak self] snap, _ in
+            guard let self = self, let docs = snap?.documents else { return }
+
+            // 1) parse all progresses
+            let progresses = docs.compactMap { try? QuestProgress.fromSnapshot($0) }
+
+            // 2) determine this quest's rank
+            let thisRank = self.rank(of: qp)
+
+            // 3) collect all in same rank & check completion
+            let sameRank = progresses.filter { self.rank(of: $0) == thisRank }
+            guard sameRank.allSatisfy({ $0.status == .completed }) else {
+                self.fetchQuestDetailAndRefresh()
+                return
+            }
+
+            // 4) record latest expiration
+            self.latestExpirationForRank = sameRank
+              .compactMap { $0.expirationTime }
+              .max() ?? Date()
+
+            // 5) identify next-rank quest IDs
+            let nextRank = thisRank + 1
+            self.pendingNextRankQuestIDs = progresses
+              .filter { self.rank(of: $0) == nextRank }
+              .compactMap { $0.id }
+
+            // 6) show accelerate prompt
+            self.showAcceleratePrompt = true
         }
     }
 
-    // MARK: - Rest & Progression
+    /// Called by your UI when the user taps “Yes” or “No” on the accelerate prompt.
+    func applyAccelerationChoice(_ accelerate: Bool) {
+        guard !pendingNextRankQuestIDs.isEmpty else { return }
+        let uid    = Auth.auth().currentUser!.uid
+        let aqsId  = activeSystem.id
+        let now    = Date()
+        let base   = accelerate ? now : (latestExpirationForRank ?? now)
 
+        // respect rest cycle
+        // you’ll need these from profile or defaults:
+        let rsH = /* restStartHour from profile */ 22
+        let rsM = /* restStartMinute */ 0
+        let reH = /* restEndHour */ 6
+        let reM = /* restEndMinute */ 0
+
+        let availDate = self.adjustedDateConsideringRest(
+          base,
+          restStartHour:   rsH, restStartMinute: rsM,
+          restEndHour:     reH, restEndMinute:   reM
+        )
+
+        // compute duration for next rank
+        let nextRank = (questDetail?.questRank ?? 0) + 1
+        let duration = defaultDuration(forRank: nextRank)
+
+        // batch update availableAt + expirationTime
+        let batch = db.batch()
+        for qpId in pendingNextRankQuestIDs {
+            let ref = userQuestProgressRef(aqsId: aqsId, qpId: qpId)
+            batch.updateData([
+                "availableAt":    Timestamp(date: availDate),
+                "expirationTime": Timestamp(date: availDate.addingTimeInterval(duration))
+            ], forDocument: ref)
+        }
+        batch.commit { [weak self] err in
+            if let e = err { print("batch unlock error:", e) }
+            // re‑run listener logic immediately
+            self?.processSnapshot(nil, nil)
+        }
+
+        // tidy up
+        showAcceleratePrompt = false
+        pendingNextRankQuestIDs = []
+    }
+    
+    /// Look up the questRank for a given QuestProgress.
+    private func rank(of qp: QuestProgress) -> Int {
+        guard let questId = qp.id,
+              let q = questCache[questId]
+        else { return 0 }
+        return q.questRank
+    }
+
+    /// Determine a TimeInterval to use for expiration for any quest of that rank.
+    private func defaultDuration(forRank rank: Int) -> TimeInterval {
+        if let q = questCache.values.first(where: { $0.questRank == rank }) {
+            let cfg = q.timeToCompleteOverride ?? TimeIntervalConfig(amount: 0, unit: "seconds")
+            switch cfg.unit {
+            case "minutes": return cfg.amount * 60
+            case "hours":   return cfg.amount * 3600
+            case "days":    return cfg.amount * 86400
+            case "weeks":   return cfg.amount * 604800
+            case "months":  return cfg.amount * 2592000
+            default:        return cfg.amount
+            }
+        }
+        return 3600
+    }
+    
+    /// Adjusts a base date to skip over the user’s rest cycle.
     private func adjustedDateConsideringRest(
         _ baseDate: Date,
         restStartHour: Int, restStartMinute: Int,
         restEndHour: Int, restEndMinute: Int
     ) -> Date {
-        print("adjustDateConsideringRest run")
         let cal = Calendar.current
         let comps = cal.dateComponents([.hour, .minute], from: baseDate)
         guard let hour = comps.hour, let minute = comps.minute else { return baseDate }
         let overnight = restStartHour >= restEndHour
+
+        // Determine if baseDate falls within rest
         let inRest: Bool = {
             if overnight {
                 let beforeMid = (hour > restStartHour || (hour == restStartHour && minute >= restStartMinute))
-                let afterMid = (hour < restEndHour || (hour == restEndHour && minute < restEndMinute))
+                let afterMid  = (hour < restEndHour   || (hour == restEndHour   && minute <  restEndMinute))
                 return beforeMid || afterMid
             } else {
-                return (hour > restStartHour || (hour == restStartHour && minute >= restStartMinute)) &&
-                       (hour < restEndHour   || (hour == restEndHour   && minute < restEndMinute))
+                return (hour > restStartHour || (hour == restStartHour && minute >= restStartMinute))
+                    && (hour < restEndHour   || (hour == restEndHour   && minute <  restEndMinute))
             }
         }()
+        // If not in rest, return the original date
         guard inRest else { return baseDate }
 
+        // Build a date representing the end of rest on that day
         var endComps = cal.dateComponents([.year, .month, .day], from: baseDate)
-        endComps.hour = restEndHour
+        endComps.hour   = restEndHour
         endComps.minute = restEndMinute
 
-        if overnight {
-            if let d = cal.date(from: endComps) {
-                // Pre‑midnight rest → ends next day
-                if hour > restStartHour || (hour == restStartHour && minute >= restStartMinute) {
-                    return cal.date(byAdding: .day, value: 1, to: d) ?? d
-                }
-                return d
+        // Handle overnight rest spanning midnight
+        if overnight, let d = cal.date(from: endComps) {
+            // If we’re in the “after midnight” portion, move to the next day
+            if hour > restStartHour || (hour == restStartHour && minute >= restStartMinute) {
+                return cal.date(byAdding: .day, value: 1, to: d) ?? d
             }
-        } else if let d = cal.date(from: endComps) {
+            return d
+        }
+
+        // Normal same-day rest end
+        if let d = cal.date(from: endComps) {
             return d
         }
 
         return baseDate
     }
-
-    private func unlockNextRank() {
-        print("unlockNextRank run")
-        let uid   = Auth.auth().currentUser!.uid
-        let aqsId = activeSystem.id
-        let sysId = activeSystem.questSystemRef.documentID
-
-        fetchSystemDocument(sysId: sysId, uid: uid, aqsId: aqsId)
+    
+    func refreshAvailableQuests() {
+        // simply re‑run the same snapshot processing logic
+        self.processSnapshot(nil, nil)
     }
-    
-    private func fetchSystemDocument(sysId: String, uid: String, aqsId: String) {
-        let sysRef = db.collection("questSystems").document(sysId)
-        sysRef.getDocument { [weak self] snap, err in
-            guard let self = self,
-                  let data = snap?.data(),
-                  err == nil
-            else { return }
-
-            // compute defaultTTC here
-            let defaultTTC: TimeIntervalConfig
-            if let dict = data["defaultTimeToComplete"] as? [String:Any],
-               let a = dict["amount"] as? Double,
-               let u = dict["unit"]   as? String {
-                defaultTTC = TimeIntervalConfig(amount: a, unit: u)
-            } else {
-                defaultTTC = TimeIntervalConfig(amount: 0, unit: "seconds")
-            }
-
-            self.fetchAllProgress(
-              uid:            uid,
-              aqsId:          aqsId,
-              defaultTTC:     defaultTTC
-            )
-        }
-    }
-    
-    private func fetchAllProgress(
-        uid: String,
-        aqsId: String,
-        defaultTTC: TimeIntervalConfig
-    ) {
-        let col = db
-          .collection("users").document(uid)
-          .collection("activeQuestSystems").document(aqsId)
-          .collection("questProgress")
-
-        col.getDocuments { [weak self] snap, err in
-            guard let self = self,
-                  err == nil,
-                  let docs = snap?.documents
-            else { return }
-
-            var byRank = [Int: [(QuestProgress, Quest)]]()
-            let group = DispatchGroup()
-
-            for doc in docs {
-                // parse QuestProgress
-                guard let qp = try? doc.data(as: QuestProgress.self) else { continue }
-                group.enter()
-                qp.questRef.getDocument { qsnap, _ in
-                    defer { group.leave() }
-                    guard let qsnap = qsnap,
-                          let qdata = qsnap.data(),
-                          let q     = Quest(from: qdata, id: qsnap.documentID)
-                    else { return }
-                    byRank[q.questRank, default: []].append((qp, q))
-                }
-            }
-
-            group.notify(queue: .main) {
-                self.processByRank(
-                  byRank:    byRank,
-                  defaultTTC: defaultTTC,
-                  uid:        uid,
-                  aqsId:      aqsId
-                )
-            }
-        }
-    }
-    
-    private func processByRank(
-      byRank:    [Int: [(QuestProgress, Quest)]],
-      defaultTTC: TimeIntervalConfig,
-      uid:        String,
-      aqsId:      String
-    ) {
-        // sorted ranks
-        let ranks = byRank.keys.sorted()
-        guard let rank = ranks.first(where: { rank in
-            let required = byRank[rank]!.filter { $0.1.isRequired }
-            return required.allSatisfy { $0.0.status == .completed }
-        }) else { return }
-
-        let nextLocked = (byRank[rank + 1] ?? []).filter { $0.0.status == .locked }
-        guard !nextLocked.isEmpty else { return }
-
-        // compute the availability time based on rest
-        let latest = byRank[rank]!.compactMap { $0.0.expirationTime }.max() ?? Date()
-        UserProfileService.shared.fetchUserProfile(for: uid) { profile, _ in
-            let rsH = profile?.restStartHour   ?? 22
-            let rsM = profile?.restStartMinute ??  0
-            let reH = profile?.restEndHour     ??   6
-            let reM = profile?.restEndMinute   ??   0
-            let avail = self.adjustedDateConsideringRest(
-              latest,
-              restStartHour:   rsH, restStartMinute: rsM,
-              restEndHour:     reH, restEndMinute:   reM
-            )
-
-            let batch = self.db.batch()
-            for (qp, q) in nextLocked {
-                // compute duration exactly as before…
-                let dur: TimeInterval = {
-                    let cfg = q.timeToCompleteOverride ?? defaultTTC
-                    switch cfg.unit {
-                    case "minutes": return cfg.amount * 60
-                    case "hours":   return cfg.amount * 3600
-                    case "days":    return cfg.amount * 86400
-                    case "weeks":   return cfg.amount * 604800
-                    case "months":  return cfg.amount * 2592000
-                    default:        return cfg.amount
-                    }
-                }()
-
-                let ref = self.userQuestProgressRef(aqsId: aqsId, qpId: qp.id!)
-                batch.updateData([
-                    "status":         QuestProgressStatus.available.rawValue,
-                    "availableAt":    Timestamp(date: avail),
-                    "expirationTime": Timestamp(date: avail.addingTimeInterval(dur))
-                ], forDocument: ref)
-            }
-            batch.commit()
-        }
-    }
-    
-    
 
     // MARK: - Helpers
 
@@ -493,5 +485,131 @@ final class QuestQueueViewModel: ObservableObject {
             .collection("users").document(uid)
             .collection("activeQuestSystems").document(aqsId)
             .collection("questProgress").document(qpId)
+    }
+    
+    /// Automatically unlock the next quest rank (no prompt), run on a timer.
+    private func periodicUnlockNextRank() {
+        // 1) Find highest fully‑completed rank
+        let completed = lastProgressList.filter { $0.status == .completed }
+        let highestRank = completed.map { rank(of: $0) }.max() ?? -1
+        guard highestRank >= 0 else { return }
+
+        // 2) Identify locked quests in the next rank
+        let nextRank = highestRank + 1
+        let lockedNext = lastProgressList.filter {
+            rank(of: $0) == nextRank && $0.status == .locked
+        }
+        guard !lockedNext.isEmpty else { return }
+
+        // 3) Base time = latest expiration in completed rank
+        let prevGroup = lastProgressList.filter { rank(of: $0) == highestRank }
+        let latestExp = prevGroup.compactMap { $0.expirationTime }.max() ?? Date()
+
+        // 4) Respect rest cycles
+        let uid = Auth.auth().currentUser!.uid
+        UserProfileService.shared.fetchUserProfile(for: uid) { profile, _ in
+            let rsH = profile?.restStartHour   ?? 22
+            let rsM = profile?.restStartMinute ??  0
+            let reH = profile?.restEndHour     ??   6
+            let reM = profile?.restEndMinute   ??   0
+
+            let avail = self.adjustedDateConsideringRest(
+                latestExp,
+                restStartHour:   rsH, restStartMinute: rsM,
+                restEndHour:     reH, restEndMinute:   reM
+            )
+
+            // 5) Compute duration for next rank
+            let duration = self.defaultDuration(forRank: nextRank)
+
+            // 6) Batch‑unlock all those quests
+            let aqsId = self.activeSystem.id
+            let batch = self.db.batch()
+            for qp in lockedNext {
+                guard let qpId = qp.id else { continue }
+                let ref = self.userQuestProgressRef(aqsId: aqsId, qpId: qpId)
+                batch.updateData([
+                    "availableAt":    Timestamp(date: avail),
+                    "expirationTime": Timestamp(date: avail.addingTimeInterval(duration))
+                ], forDocument: ref)
+            }
+            batch.commit()
+        }
+    }
+    
+}
+
+// MARK: - Maintenance Helper
+
+extension QuestQueueViewModel {
+    /// Run expiration, activation, and unlock logic for a given system without UI.
+    static func runMaintenance(for system: ActiveQuestSystem) {
+        let vm = QuestQueueViewModel(activeSystem: system)
+        // 1) Expire overdue & activate available quests
+        vm.processSnapshot(nil, nil)
+        // 2) Auto-unlock next rank
+        vm.periodicUnlockNextRank()
+    }
+}
+
+// MARK: –– Static Action Helpers
+
+extension QuestQueueViewModel {
+    /// Completes the given ActiveQuest inside its system.
+    static func complete(_ aq: ActiveQuest, in system: ActiveQuestSystem) {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        let qpRef = Firestore.firestore()
+            .collection("users").document(uid)
+            .collection("activeQuestSystems").document(aq.aqsId)
+            .collection("questProgress").document(aq.id)
+
+        // Aura gain logic
+        let failed     = Double(aq.progress.failedCount)
+        let debuff     = aq.quest.questRepeatDebuffOverride ?? 1.0
+        let multiplier = pow(debuff, failed)
+        let auraGain   = aq.quest.questAuraGranted * multiplier
+
+        let batch = Firestore.firestore().batch()
+        batch.updateData([
+            "status":      QuestProgressStatus.completed.rawValue,
+            "completedAt": FieldValue.serverTimestamp()
+        ], forDocument: qpRef)
+        batch.updateData([
+            "aura": FieldValue.increment(auraGain)
+        ], forDocument: Firestore.firestore().collection("users").document(uid))
+        batch.commit()
+
+        // run maintenance on the real system
+        runMaintenance(for: system)
+    }
+
+    /// Restarts the given ActiveQuest inside its system.
+    static func restart(_ aq: ActiveQuest, in system: ActiveQuestSystem) {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+
+        // compute duration from old timestamps
+        let oldAvail = aq.progress.availableAt ?? Date()
+        let oldExp   = aq.progress.expirationTime ?? oldAvail
+        let duration = oldExp.timeIntervalSince(oldAvail)
+
+        let now = Date()
+        let newExp = now.addingTimeInterval(duration)
+
+        let qpRef = Firestore.firestore()
+            .collection("users").document(uid)
+            .collection("activeQuestSystems").document(aq.aqsId)
+            .collection("questProgress").document(aq.id)
+
+        qpRef.updateData([
+            "status":         QuestProgressStatus.available.rawValue,
+            "availableAt":    Timestamp(date: now),
+            "expirationTime": Timestamp(date: newExp),
+            "failedCount":    FieldValue.increment(Int64(1))
+        ]) { err in
+            if let err = err { print("❌ restart error:", err) }
+        }
+
+        // run maintenance on the real system
+        runMaintenance(for: system)
     }
 }
