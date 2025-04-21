@@ -13,6 +13,7 @@ extension QuestQueueViewModel {
     ///   - progressList: All loaded QuestProgress items
     ///   - systemId: The ActiveQuestSystem.documentID
     func expireOverdueQuests(_ progressList: [QuestProgress], systemId: String) {
+        print("QuestQueueVM+Exp: expireOverdueQuests \(progressList.count)")
         let now = Date()
         guard let uid = Auth.auth().currentUser?.uid else { return }
 

@@ -17,6 +17,7 @@ final class UserQuestService {
     func assignSystem(systemId: String,
                       isUserSelected: Bool = true,
                       completion: @escaping (Result<ActiveQuestSystem, Error>) -> Void) {
+        print("assignSystem \(systemId), \(isUserSelected)")
         let sysRef = db.collection("questSystems").document(systemId)
         sysRef.getDocument { sysSnap, sysErr in
             if let sysErr = sysErr {
@@ -98,6 +99,7 @@ final class UserQuestService {
     func refreshProgress(for aqsId: String,
                          systemId: String,
                          completion: @escaping (Error?) -> Void) {
+        print("refreshProgress \(aqsId) \(systemId)")
         initializeQuestProgress(systemId: systemId, aqsId: aqsId, completion: completion)
     }
 
@@ -105,6 +107,7 @@ final class UserQuestService {
     func updateSystemStatus(aqsId: String,
                             status: SystemAssignmentStatus,
                             completion: ((Error?) -> Void)? = nil) {
+        print("updateSystemStatus \(aqsId) \(status)")
         let ref = db
             .collection("users").document(uid)
             .collection("activeQuestSystems")
@@ -120,6 +123,7 @@ final class UserQuestService {
     private func initializeQuestProgress(systemId: String,
                                          aqsId: String,
                                          completion: @escaping (Error?) -> Void) {
+        print("initQuestProgress \(aqsId) \(systemId) ")
         let systemRef = db.collection("questSystems").document(systemId)
         let questsRef = systemRef.collection("quests")
         let userQPBase = db

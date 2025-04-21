@@ -48,7 +48,7 @@ final class MyQuestsViewModel: ObservableObject {
 
     // MARK: - Listen Active Systems
     private func listenActiveSystems() {
-        print("MQVM: listenActiveSystems run")
+        print("MyQuestsVM: listenActiveSystems")
         guard let uid = Auth.auth().currentUser?.uid else { return }
         let aqsColl = db
             .collection("users").document(uid)
@@ -134,7 +134,7 @@ final class MyQuestsViewModel: ObservableObject {
     // MARK: - QuestProgress Listeners
     private func listenQuestProgress(for aqsId: String, systemName: String) {
         guard let uid = Auth.auth().currentUser?.uid else { return }
-        print("MQVM listenQuestProgress for \(aqsId) system \(systemName) run")
+        print("MyQuestsVM: listenQuestProgress for \(aqsId) system \(systemName) run")
         let qpColl = db
             .collection("users").document(uid)
             .collection("activeQuestSystems").document(aqsId)
@@ -190,7 +190,7 @@ final class MyQuestsViewModel: ObservableObject {
 
     // MARK: - Recompute UI State
     private func recomputeActiveQuests() {
-        print("MQVM recompute active quests run")
+        print("MyQuestsVM:  recompute active quests run")
         let now = Date()
         let all = systemQuests.values.flatMap { $0 }
         activeQuests = all.sorted {
@@ -200,6 +200,7 @@ final class MyQuestsViewModel: ObservableObject {
 
     // MARK: - Maintenance Timer
     private func startMaintenanceTimer() {
+        print("MyQuestsVM: startMaintenanceTimer run")
         maintenanceTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
             guard let self = self else { return }
             // Run the same maintenance for each active system
@@ -213,12 +214,14 @@ final class MyQuestsViewModel: ObservableObject {
 
     /// Delegates to QuestQueueViewModel.complete(_:)
     func complete(_ aq: ActiveQuest) {
+        print("MyQuestsVM: complete \(aq)")
         guard let system = activeQuestSystems.first(where: { $0.id == aq.aqsId }) else { return }
         QuestQueueViewModel.complete(aq, in: system)
     }
 
     /// Delegates to QuestQueueViewModel.restart(_:)
     func restart(_ aq: ActiveQuest, completion: @escaping (Bool) -> Void) {
+        print("MyQuestsVM: restart \(aq)")
         guard let system = activeQuestSystems.first(where: { $0.id == aq.aqsId }) else {
             completion(false); return
         }

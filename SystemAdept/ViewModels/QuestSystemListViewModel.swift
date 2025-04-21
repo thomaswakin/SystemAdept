@@ -25,6 +25,7 @@ final class QuestSystemListViewModel: ObservableObject {
 
     /// Fetch global quest systems.
     func loadSystems() {
+        print("QuestSystemListVM: loading quest systems...")
         isLoading = true
         db.collection("questSystems")
             .getDocuments { [weak self] snapshot, error in
@@ -41,6 +42,7 @@ final class QuestSystemListViewModel: ObservableObject {
 
     /// Fetch the user's currently active/paused systems to disable re‑adding.
     func loadActiveSystemIds() {
+        print("QuestSystemListVM: loading active system IDs...")
         guard let uid = Auth.auth().currentUser?.uid else { return }
         db.collection("users")
           .document(uid)
@@ -66,6 +68,7 @@ final class QuestSystemListViewModel: ObservableObject {
 
     /// Assign a new system to the user.
     func select(system: QuestSystem) {
+        print("QuestSystemListVM: select \(system.id)")
         isLoading = true
         UserQuestService().assignSystem(systemId: system.id) { [weak self] result in
             DispatchQueue.main.async {

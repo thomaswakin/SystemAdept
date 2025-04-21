@@ -35,6 +35,7 @@ final class ActiveSystemsViewModel: ObservableObject {
 
     // MARK: - Listen for Active Systems
     private func startListening() {
+        print("ActiveSystemVM: starting activeSystems listener...")
         guard let uid = Auth.auth().currentUser?.uid else { return }
         let coll = db
             .collection("users")
@@ -114,17 +115,20 @@ final class ActiveSystemsViewModel: ObservableObject {
 
     // MARK: - User Actions
     func togglePause(system: ActiveQuestSystem) {
+        print("ActiveSystemVM: toogle pause \(system.id)")
         let newStatus: SystemAssignmentStatus =
             (system.status == .active) ? .paused : .active
         updateStatus(aqsId: system.id, status: newStatus)
     }
 
     func stop(system: ActiveQuestSystem) {
+        print("stop \(system.id)")
         updateStatus(aqsId: system.id, status: .stopped)
     }
 
     // MARK: - Helpers
     private func updateStatus(aqsId: String, status: SystemAssignmentStatus) {
+        print("ActiveSystemVM: updateStatus \(aqsId) \(status)")
         guard let uid = Auth.auth().currentUser?.uid else { return }
         let ref = db
             .collection("users")

@@ -13,6 +13,7 @@ extension QuestProgress {
     /// - Returns: A fully populated QuestProgress.
     /// - Throws: NSError if any required fields are missing or invalid.
     static func fromSnapshot(_ snapshot: DocumentSnapshot) throws -> QuestProgress {
+        print("fromSnapshot \(snapshot)")
         let data = snapshot.data() ?? [:]
         let docID = snapshot.documentID
         

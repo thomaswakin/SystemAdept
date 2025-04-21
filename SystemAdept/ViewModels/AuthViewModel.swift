@@ -33,6 +33,7 @@ final class AuthViewModel: ObservableObject {
     }
 
     private func attachUserListener(for uid: String?) {
+        print("AuthVM: attaaching user listener for \(uid ?? "nil")")
         userListener?.remove()
         guard let uid = uid else {
             self.userProfile = nil
@@ -68,6 +69,7 @@ final class AuthViewModel: ObservableObject {
     }
 
     func signOut() throws {
+        print("AuthVM: signout")
         try Auth.auth().signOut()
     }
 }
