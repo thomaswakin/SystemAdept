@@ -93,12 +93,20 @@ final class QuestQueueViewModel: ObservableObject {
             let qp    = current,
             let qpId  = qp.id
         else { return }
-        let newCount = qp.failedCount + 1
+
+        // If it’s already failed, don’t increment again
+        let newCount: Int
+        if qp.status == .failed {
+            newCount = qp.failedCount
+        } else {
+            newCount = qp.failedCount + 1
+        }
+
         let ref = userQuestProgressRef(aqsId: activeSystem.id, qpId: qpId)
         ref.updateData([
             "status":      QuestProgressStatus.failed.rawValue,
             "failedCount": newCount
-        ]) { err in
+        ]) { (err: Error?) in
             if let e = err { print("❌ failCurrent error:", e) }
         }
         fetchQuestDetailAndRefresh()
@@ -143,7 +151,8 @@ final class QuestQueueViewModel: ObservableObject {
             let exp = now.addingTimeInterval(duration)
             let ref = self.userQuestProgressRef(aqsId: self.activeSystem.id, qpId: qpId)
             
-            print("  Settings - now: \(now), exp: \(exp), status \(QuestProgressStatus.available.rawValue)")
+            print("  QuestQueueViewModel: Settings - now: \(now), exp: \(exp), status \(QuestProgressStatus.available.rawValue)")
+            print("  QuestQueueViewModel: setting availableAt \(now)")
             ref.updateData([
                 "status":         QuestProgressStatus.available.rawValue,
                 "availableAt":    Timestamp(date: now),
@@ -151,6 +160,7 @@ final class QuestQueueViewModel: ObservableObject {
             ]) { err in
                 if let e = err { print("❌ restartCurrent error:", e) }
             }
+            
         }
     }
     // MARK: - Listener
@@ -382,6 +392,7 @@ final class QuestQueueViewModel: ObservableObject {
         let batch = db.batch()
         for qpId in pendingNextRankQuestIDs {
             let ref = userQuestProgressRef(aqsId: aqsId, qpId: qpId)
+            print("  QuestQueueVM: pendingRanksQUestsIDS setting availableAt update: \(availDate)")
             batch.updateData([
                 "availableAt":    Timestamp(date: availDate),
                 "expirationTime": Timestamp(date: availDate.addingTimeInterval(duration))
@@ -400,7 +411,7 @@ final class QuestQueueViewModel: ObservableObject {
     
     /// Look up the questRank for a given QuestProgress.
     private func rank(of qp: QuestProgress) -> Int {
-        print("QuestQueueVM: rank(of: \(qp))")
+        //print("QuestQueueVM: rank(of: \(qp))")
         guard let questId = qp.id,
               let q = questCache[questId]
         else { return 0 }
@@ -487,36 +498,78 @@ final class QuestQueueViewModel: ObservableObject {
             .collection("questProgress").document(qpId)
     }
     
-    /// Flip any locked quests whose `availableAt` ≤ now → available, then fire off maintenance.
+    /// Flip any locked quests whose `availableAt` ≤ now → available,
+    /// set their expirationTime, then fire off maintenance.
     func refreshAvailableQuests() {
         print("QuestQueueVM: refreshAvailableQuests")
         guard let uid = Auth.auth().currentUser?.uid else { return }
+        
         let now = Date()
         let col = db
             .collection("users").document(uid)
             .collection("activeQuestSystems").document(activeSystem.id)
             .collection("questProgress")
 
-        // 1) Find all locked quests whose availableAt has arrived
+        // 1) Find all locked quests ready to unlock
         col
           .whereField("status", isEqualTo: QuestProgressStatus.locked.rawValue)
           .whereField("availableAt", isLessThanOrEqualTo: Timestamp(date: now))
-          .getDocuments { [weak self] snap, err in
-            guard let self = self, err == nil else { return }
-            let batch = self.db.batch()
-
-            // 2) Flip them to available
-            snap?.documents.forEach { doc in
-                batch.updateData(
-                  ["status": QuestProgressStatus.available.rawValue],
-                  forDocument: doc.reference
-                )
+          .getDocuments { snap, err in
+            // Strongly capture self here so VM sticks around
+            guard err == nil, let docs = snap?.documents else {
+                print("❌ refreshAvailableQuests getDocuments error:", err ?? "no docs")
+                return
             }
 
-            // 3) Commit the batch, then re-run our snapshot + unlock logic
-            batch.commit { _ in
-                // This will trigger your listener to pick up the new statuses,
-                // but to be sure we re-evaluate right away we can also:
+            let batch = self.db.batch()
+
+            // 2) For each, compute the correct expiration and update
+            for doc in docs {
+                guard
+                  let qp = try? QuestProgress.fromSnapshot(doc),
+                  let qpId = qp.id
+                else { continue }
+
+                // Compute duration override‑first, else rank default
+                let duration: TimeInterval
+                if let quest = self.questCache[qpId],
+                   let override = quest.timeToCompleteOverride
+                {
+                    switch override.unit {
+                    case "minutes": duration = override.amount * 60
+                    case "hours":   duration = override.amount * 3600
+                    case "days":    duration = override.amount * 86400
+                    case "weeks":   duration = override.amount * 604800
+                    case "months":  duration = override.amount * 2592000
+                    default:        duration = override.amount
+                    }
+                } else if let quest = self.questCache[qpId] {
+                    duration = self.defaultDuration(forRank: quest.questRank)
+                } else {
+                    print("⚠️ refreshAvailableQuests: missing cache for \(qpId), using 1h")
+                    duration = 3600
+                }
+
+                let startDate = now
+                let expDate   = startDate.addingTimeInterval(duration)
+                let ref       = self.userQuestProgressRef(
+                    aqsId: self.activeSystem.id,
+                    qpId: qpId
+                )
+
+                batch.updateData([
+                    "status":          QuestProgressStatus.available.rawValue,
+                    "availableAt":     Timestamp(date: startDate),
+                    "expirationTime":  Timestamp(date: expDate)
+                ], forDocument: ref)
+            }
+
+            // 3) Commit and then re‑run maintenance
+            batch.commit { (err: Error?) in
+                if let e = err {
+                    print("❌ refreshAvailableQuests batch error:", e)
+                }
+                // Force UI update + next‑rank unlock
                 self.processSnapshot(nil, nil)
                 self.periodicUnlockNextRank()
             }
@@ -525,55 +578,92 @@ final class QuestQueueViewModel: ObservableObject {
     
     /// Automatically unlock the next quest rank (no prompt), run on a timer.
     private func periodicUnlockNextRank() {
-        print("QuestQueueVM: periodicUnlockNextRank")
-        // 1) Find highest fully‑completed rank
-        let completed = lastProgressList.filter { $0.status == .completed }
-        let highestRank = completed.map { rank(of: $0) }.max() ?? -1
-        guard highestRank >= 0 else { return }
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        let col = db
+            .collection("users").document(uid)
+            .collection("activeQuestSystems").document(activeSystem.id)
+            .collection("questProgress")
 
-        // 2) Identify locked quests in the next rank
-        let nextRank = highestRank + 1
-        let lockedNext = lastProgressList.filter {
-            rank(of: $0) == nextRank && $0.status == .locked
-        }
-        guard !lockedNext.isEmpty else { return }
-
-        // 3) Base time = latest expiration in completed rank
-        let prevGroup = lastProgressList.filter { rank(of: $0) == highestRank }
-        let latestExp = prevGroup.compactMap { $0.expirationTime }.max() ?? Date()
-
-        // 4) Respect rest cycles
-        let uid = Auth.auth().currentUser!.uid
-        UserProfileService.shared.fetchUserProfile(for: uid) { profile, _ in
-            let rsH = profile?.restStartHour   ?? 22
-            let rsM = profile?.restStartMinute ??  0
-            let reH = profile?.restEndHour     ??   6
-            let reM = profile?.restEndMinute   ??   0
-
-            let avail = self.adjustedDateConsideringRest(
-                latestExp,
-                restStartHour:   rsH, restStartMinute: rsM,
-                restEndHour:     reH, restEndMinute:   reM
-            )
-
-            // 5) Compute duration for next rank
-            let duration = self.defaultDuration(forRank: nextRank)
-
-            // 6) Batch‑unlock all those quests
-            let aqsId = self.activeSystem.id
-            let batch = self.db.batch()
-            for qp in lockedNext {
-                guard let qpId = qp.id else { continue }
-                let ref = self.userQuestProgressRef(aqsId: aqsId, qpId: qpId)
-                batch.updateData([
-                    "availableAt":    Timestamp(date: avail),
-                    "expirationTime": Timestamp(date: avail.addingTimeInterval(duration))
-                ], forDocument: ref)
+        // Fetch current progress for this system
+        col.getDocuments { snap, err in
+            guard err == nil, let docs = snap?.documents else {
+                print("❌ periodicUnlockNextRank getDocuments failed:", err ?? "no docs")
+                return
             }
-            batch.commit()
+
+            // Parse into QuestProgress array
+            let progresses = docs.compactMap { try? QuestProgress.fromSnapshot($0) }
+
+            // Build a map: rank → [QuestProgress]
+            var byRank = [Int: [QuestProgress]]()
+            for qp in progresses {
+                let r = self.rank(of: qp)
+                byRank[r, default: []].append(qp)
+            }
+
+            // Sort the ranks ascending
+            let ranks = byRank.keys.sorted()
+
+            // Find the highest rank where *all* quests are .completed
+            var highestCompletedRank = -1
+            for rank in ranks {
+                let group = byRank[rank]!
+                guard !group.isEmpty && group.allSatisfy({ $0.status == .completed }) else {
+                    break
+                }
+                highestCompletedRank = rank
+            }
+
+            // Nothing to unlock if we didn't fully complete any rank
+            guard highestCompletedRank >= 0 else { return }
+
+            let nextRank = highestCompletedRank + 1
+            // Get the locked quests at the next rank
+            let lockedNext = byRank[nextRank]?.filter { $0.status == .locked } ?? []
+            guard !lockedNext.isEmpty else { return }
+
+            // Compute the “base” unlock time = max expiration of the completed rank
+            let prevGroup = byRank[highestCompletedRank]!
+            let latestExp = prevGroup
+                .compactMap { $0.expirationTime }
+                .max() ?? Date()
+
+            // Fetch rest‑cycle info and unlock batch
+            UserProfileService.shared.fetchUserProfile(for: uid) { profile, _ in
+                let rsH = profile?.restStartHour   ?? 22
+                let rsM = profile?.restStartMinute ??  0
+                let reH = profile?.restEndHour     ??   6
+                let reM = profile?.restEndMinute   ??   0
+
+                let avail = self.adjustedDateConsideringRest(
+                    latestExp,
+                    restStartHour:   rsH, restStartMinute: rsM,
+                    restEndHour:     reH, restEndMinute:   reM
+                )
+
+                // Compute the duration for quests at nextRank
+                let duration = self.defaultDuration(forRank: nextRank)
+
+                // Batch‑unlock them with correct times
+                let batch = self.db.batch()
+                let aqsId = self.activeSystem.id
+                for qp in lockedNext {
+                    guard let qpId = qp.id else { continue }
+                    let ref = self.userQuestProgressRef(aqsId: aqsId, qpId: qpId)
+                    batch.updateData([
+                        "status":         QuestProgressStatus.available.rawValue,
+                        "availableAt":    Timestamp(date: avail),
+                        "expirationTime": Timestamp(date: avail.addingTimeInterval(duration))
+                    ], forDocument: ref)
+                }
+                batch.commit { (err: Error?) in
+                    if let e = err {
+                        print("❌ periodicUnlockNextRank batch error:", e)
+                    }
+                }
+            }
         }
     }
-    
 }
 
 
@@ -598,6 +688,7 @@ extension QuestQueueViewModel {
     static func complete(_ aq: ActiveQuest, in system: ActiveQuestSystem) {
         print("QuestQueueVM: completing \(aq) in \(system)")
         guard let uid = Auth.auth().currentUser?.uid else { return }
+        let vm = QuestQueueViewModel(activeSystem: system)
         let qpRef = Firestore.firestore()
             .collection("users").document(uid)
             .collection("activeQuestSystems").document(aq.aqsId)
@@ -621,6 +712,8 @@ extension QuestQueueViewModel {
 
         // run maintenance on the real system
         runMaintenance(for: system)
+        
+        vm.refreshAvailableQuests()
     }
 
     /// Restarts the given ActiveQuest inside its system by delegating to the instance method.
@@ -635,6 +728,8 @@ extension QuestQueueViewModel {
 
         // 3) Invoke the existing instance method, which uses the override‑based duration logic
         vm.restartCurrent()
+        
+        vm.refreshAvailableQuests()
     }
 
 }

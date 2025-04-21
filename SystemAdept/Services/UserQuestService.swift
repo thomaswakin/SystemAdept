@@ -190,6 +190,7 @@ final class UserQuestService {
                         let duration = seconds(from: ttcCfg)
                         qpData["status"] = "available"
                         qpData["availableAt"] = Timestamp(date: now)
+                        print("  UserQuestService: Setting availableAt \(Timestamp(date: now))")
                         qpData["expirationTime"] = Timestamp(date: now.addingTimeInterval(duration))
                     }
 

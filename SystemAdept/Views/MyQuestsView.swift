@@ -7,11 +7,73 @@
 
 import SwiftUI
 
+// MARK: - Countdown Formatting Helpers
+
+fileprivate func timeRemainingText(until expiry: Date) -> String {
+    let interval = expiry.timeIntervalSinceNow
+    guard interval > 0 else { return "Expired" }
+
+    let formatter = DateComponentsFormatter()
+    formatter.allowedUnits = [.year, .month, .day, .hour, .minute, .second]
+    formatter.unitsStyle = .abbreviated
+    formatter.maximumUnitCount = 2
+    formatter.zeroFormattingBehavior = .dropAll
+
+    return formatter.string(from: interval) ?? ""
+}
+
+fileprivate func expirationColor(for expiry: Date) -> Color {
+    let remain = expiry.timeIntervalSinceNow
+    switch remain {
+    case ..<0:
+        return .gray
+    case 0..<3600:
+        return .red
+    case 3600..<86_400:
+        return .orange
+    default:
+        return .green
+    }
+}
+
+/// A self‑contained view that shows a live countdown from `now` between `start`→`expiry`.
+/// A self‑contained view that shows a live countdown from `now` between `start`→`expiry`.
+struct ExpiryCountdownView: View {
+    let start: Date
+    let expiry: Date
+    let now: Date
+
+    private var total: TimeInterval { expiry.timeIntervalSince(start) }
+    private var remaining: TimeInterval { max(0, expiry.timeIntervalSince(now)) }
+    private var label: String { timeRemainingText(until: expiry) }
+
+    /// Choose color: gray if expired, red if ≤10% remaining, orange if <1 h, else green
+    private var color: Color {
+        if remaining <= 0 {
+            return .gray
+        } else if remaining < total * 0.1 {
+            return .red
+        } else if remaining < 3600 {
+            return .orange
+        } else {
+            return .green
+        }
+    }
+
+    var body: some View {
+        Text("Expires in \(label)")
+          .font(.caption2)
+          .monospacedDigit()
+          .foregroundColor(color)
+    }
+}
+
 struct MyQuestsView: View {
     @StateObject private var vm = MyQuestsViewModel()
     @State private var filter: Filter = .all
     @State private var ascending = true
     @State private var showDebuffMessage = false
+    @State private var now = Date()
 
     private enum Filter: String, CaseIterable, Identifiable {
         case all = "All"
@@ -56,7 +118,6 @@ struct MyQuestsView: View {
     }
 
     var body: some View {
-        let now = Date()
         ZStack {
             VStack {
                 // Filter + Sort Bar
@@ -153,11 +214,11 @@ struct MyQuestsView: View {
                                         .foregroundColor(.gray)
                                 }
                             } else if aq.progress.status == .available {
-                                if let exp = aq.progress.expirationTime {
-                                    let remaining = Int(exp.timeIntervalSince(now))
-                                    Text(remaining > 0 ? "Expires in \(remaining)s" : "Expired")
-                                        .font(.caption2)
-                                        .foregroundColor(.gray)
+                                if let start = aq.progress.availableAt,
+                                   let expiry = aq.progress.expirationTime
+                                {
+                                    // Pass the @State now, not a fresh Date()
+                                    ExpiryCountdownView(start: start, expiry: expiry, now: now)
                                 }
                             }
 
@@ -192,7 +253,14 @@ struct MyQuestsView: View {
             }
         }
         .navigationTitle("Active Quests")
+        .onReceive(
+          Timer.publish(every: 1, on: .main, in: .common)
+               .autoconnect()
+        ) { time in
+          self.now = time
+        }
     }
+    
 }
 
 

@@ -217,6 +217,7 @@ final class MyQuestsViewModel: ObservableObject {
         print("MyQuestsVM: complete \(aq)")
         guard let system = activeQuestSystems.first(where: { $0.id == aq.aqsId }) else { return }
         QuestQueueViewModel.complete(aq, in: system)
+        self.recomputeActiveQuests()
     }
 
     /// Delegates to QuestQueueViewModel.restart(_:)
@@ -227,5 +228,6 @@ final class MyQuestsViewModel: ObservableObject {
         }
         QuestQueueViewModel.restart(aq, in: system)
         completion(true)
+        self.recomputeActiveQuests()
     }
 }
