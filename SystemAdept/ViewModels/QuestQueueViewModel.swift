@@ -277,7 +277,6 @@ final class QuestQueueViewModel: ObservableObject {
         let shouldRepeat = true
         let callback: (Timer) -> Void = { [weak self] t in
             guard let self = self else { return }
-            print(" QuestQueueVM: inside callback")
             let remaining = end.timeIntervalSinceNow
             let clamped   = max(0, remaining)
             self.countdown = clamped
