@@ -42,10 +42,27 @@ final class QuestQueueViewModel: ObservableObject {
     
     /// Cache Quest ID → Quest for quick lookups
     private var questCache: [String: Quest] = [:]
+    
+    /// Fallback duration when a quest has no per‑quest override
+    private var systemDefaultTTC = TimeIntervalConfig(amount: 0, unit: "seconds")
 
     // MARK: - Init / Deinit
     init(activeSystem: ActiveQuestSystem) {
         self.activeSystem = activeSystem
+        
+        // Pull the system‐level defaultTimeToComplete
+        let sysRef = activeSystem.questSystemRef
+        sysRef.getDocument { [weak self] snap, err in
+          guard let self = self,
+                err == nil,
+                let data = snap?.data(),
+                let dict = data["defaultTimeToComplete"] as? [String:Any],
+                let amt  = dict["amount"] as? Double,
+                let unit = dict["unit"]   as? String
+          else { return }
+
+          self.systemDefaultTTC = TimeIntervalConfig(amount: amt, unit: unit)
+        }
         
         // Preload all quest definitions into the cache
         self.preloadAllQuests()
@@ -420,19 +437,29 @@ final class QuestQueueViewModel: ObservableObject {
 
     /// Determine a TimeInterval to use for expiration for any quest of that rank.
     private func defaultDuration(forRank rank: Int) -> TimeInterval {
-        print("QuestQueueVM: defaultDuration(forRank: \(rank))")
-        if let q = questCache.values.first(where: { $0.questRank == rank }) {
-            let cfg = q.timeToCompleteOverride ?? TimeIntervalConfig(amount: 0, unit: "seconds")
-            switch cfg.unit {
-            case "minutes": return cfg.amount * 60
-            case "hours":   return cfg.amount * 3600
-            case "days":    return cfg.amount * 86400
-            case "weeks":   return cfg.amount * 604800
-            case "months":  return cfg.amount * 2592000
-            default:        return cfg.amount
-            }
+      // 1) If any quest in this rank has its own override, use *that*
+      if let quest = questCache.values.first(where: { $0.questRank == rank }) {
+        let cfg = quest.timeToCompleteOverride ?? systemDefaultTTC
+        switch cfg.unit {
+          case "minutes": return cfg.amount * 60
+          case "hours":   return cfg.amount * 3600
+          case "days":    return cfg.amount * 86400
+          case "weeks":   return cfg.amount * 604800
+          case "months":  return cfg.amount * 2592000
+          default:        return cfg.amount
         }
-        return 3600
+      }
+
+      // 2) Otherwise use the system default
+      let cfg = systemDefaultTTC
+      switch cfg.unit {
+        case "minutes": return cfg.amount * 60
+        case "hours":   return cfg.amount * 3600
+        case "days":    return cfg.amount * 86400
+        case "weeks":   return cfg.amount * 604800
+        case "months":  return cfg.amount * 2592000
+        default:        return cfg.amount
+      }
     }
     
     /// Adjusts a base date to skip over the user’s rest cycle.
@@ -651,7 +678,7 @@ final class QuestQueueViewModel: ObservableObject {
                     guard let qpId = qp.id else { continue }
                     let ref = self.userQuestProgressRef(aqsId: aqsId, qpId: qpId)
                     batch.updateData([
-                        "status":         QuestProgressStatus.available.rawValue,
+                        //"status":         QuestProgressStatus.available.rawValue,
                         "availableAt":    Timestamp(date: avail),
                         "expirationTime": Timestamp(date: avail.addingTimeInterval(duration))
                     ], forDocument: ref)
@@ -710,10 +737,9 @@ extension QuestQueueViewModel {
         ], forDocument: Firestore.firestore().collection("users").document(uid))
         batch.commit()
 
-        // run maintenance on the real system
-        runMaintenance(for: system)
+        // Schedule the next rank based on actual latest expiration
+        vm.prepareNextRankQuests(afterCompleting: aq.progress)
         
-        vm.refreshAvailableQuests()
     }
 
     /// Restarts the given ActiveQuest inside its system by delegating to the instance method.

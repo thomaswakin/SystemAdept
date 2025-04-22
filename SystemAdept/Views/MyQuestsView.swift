@@ -24,19 +24,17 @@ fileprivate func timeRemainingText(until expiry: Date) -> String {
 
 fileprivate func expirationColor(for expiry: Date) -> Color {
     let remain = expiry.timeIntervalSinceNow
-    switch remain {
-    case ..<0:
+    if remain <= 0 {
         return .gray
-    case 0..<3600:
+    } else if remain < 3600 {
         return .red
-    case 3600..<86_400:
+    } else if remain < 86_400 {
         return .orange
-    default:
+    } else {
         return .green
     }
 }
 
-/// A self‑contained view that shows a live countdown from `now` between `start`→`expiry`.
 /// A self‑contained view that shows a live countdown from `now` between `start`→`expiry`.
 struct ExpiryCountdownView: View {
     let start: Date
@@ -76,31 +74,37 @@ struct MyQuestsView: View {
     @State private var now = Date()
 
     private enum Filter: String, CaseIterable, Identifiable {
-        case all = "All"
-        case today = "Today"
-        case week = "Week"
-        case month = "Month"
-        case past = "Past"
+        case all      = "All"
+        case today    = "Today"
+        case complete = "Complete"
 
         var id: String { rawValue }
+
+        /// Determines if a given date matches the filter criteria.
         func matches(_ date: Date?) -> Bool {
             guard let date = date else { return false }
             let now = Date()
+
             switch self {
-            case .all: return true
-            case .today: return Calendar.current.isDate(date, inSameDayAs: now)
-            case .week: return date >= now && date < Calendar.current.date(byAdding: .day, value: 7, to: now)!
-            case .month: return date >= now && date < Calendar.current.date(byAdding: .month, value: 1, to: now)!
-            case .past: return false
+            case .all:
+                // include all active (available) and expired (failed).
+                return true
+            case .today:
+                // only those expiring today
+                return Calendar.current.isDate(date, inSameDayAs: now)
+            case .complete:
+                // not used, completed quests handled separately
+                return false
             }
         }
     }
 
+    /// Applies the current filter and sort settings to the quest list.
     private var filteredAndSorted: [ActiveQuest] {
         let all = vm.activeQuests
         let filtered: [ActiveQuest] = {
             switch filter {
-            case .past:
+            case .complete:
                 return all.filter { $0.progress.status == .completed }
             default:
                 return all.filter {
@@ -110,9 +114,17 @@ struct MyQuestsView: View {
                 }
             }
         }()
+
         return filtered.sorted { a, b in
-            let d1 = (filter == .past ? a.progress.completedAt : a.progress.expirationTime) ?? Date.distantPast
-            let d2 = (filter == .past ? b.progress.completedAt : b.progress.expirationTime) ?? Date.distantPast
+            let d1: Date
+            let d2: Date
+            if filter == .complete {
+                d1 = a.progress.completedAt    ?? Date.distantPast
+                d2 = b.progress.completedAt    ?? Date.distantPast
+            } else {
+                d1 = a.progress.expirationTime ?? Date.distantPast
+                d2 = b.progress.expirationTime ?? Date.distantPast
+            }
             return ascending ? (d1 < d2) : (d1 > d2)
         }
     }
@@ -180,9 +192,7 @@ struct MyQuestsView: View {
                                         .buttonStyle(.bordered)
                                         .controlSize(.small)
                                     }
-                                    
                                 } else if aq.progress.status == .failed {
-                                    // EXPIRED → show Restart
                                     Button("Restart") {
                                         vm.restart(aq) { success in
                                             if success {
@@ -195,8 +205,7 @@ struct MyQuestsView: View {
                                     }
                                     .buttonStyle(.bordered)
                                     .controlSize(.small)
-                                }
-                                else {
+                                } else {
                                     Text("Completed")
                                         .font(.caption)
                                         .foregroundColor(.secondary)
@@ -207,7 +216,7 @@ struct MyQuestsView: View {
                                 .foregroundColor(.secondary)
 
                             // Show expiration or completion
-                            if filter == .past {
+                            if filter == .complete {
                                 if let comp = aq.progress.completedAt {
                                     Text("Completed on \(comp.formatted(date: .abbreviated, time: .shortened))")
                                         .font(.caption2)
@@ -217,7 +226,6 @@ struct MyQuestsView: View {
                                 if let start = aq.progress.availableAt,
                                    let expiry = aq.progress.expirationTime
                                 {
-                                    // Pass the @State now, not a fresh Date()
                                     ExpiryCountdownView(start: start, expiry: expiry, now: now)
                                 }
                             }
@@ -233,7 +241,9 @@ struct MyQuestsView: View {
                     }
 
                     if filteredAndSorted.isEmpty {
-                        Text(filter == .past ? "No completed quests yet." : "No quests match “\(filter.rawValue)”")
+                        Text(filter == .complete
+                            ? "No completed quests yet."
+                            : "No quests match “\(filter.rawValue)”")
                             .foregroundColor(.secondary)
                             .padding()
                     }
@@ -241,7 +251,6 @@ struct MyQuestsView: View {
                 .listStyle(.plain)
             }
 
-            // Overlay message
             if showDebuffMessage {
                 Text("Reinitiating Quest. Penalty Debuff Applied")
                     .padding()
@@ -260,7 +269,4 @@ struct MyQuestsView: View {
           self.now = time
         }
     }
-    
 }
-
-
