@@ -268,26 +268,43 @@ final class QuestQueueViewModel: ObservableObject {
 
     // MARK: - Countdown
 
+    /// Starts a 1‑second timer counting down to `end`.
+    /// When time’s up, we call expireOverdueQuests(...) so that
+    /// the single‐pass expiration query handles the debuff exactly once.
     private func startTimer(until end: Date) {
         print("QuestQueueVM: startTimer run")
+        // Tear down any old timer
         timer?.invalidate()
+        // Show initial countdown immediately
         countdown = max(0, end.timeIntervalSinceNow)
 
         let interval: TimeInterval = 1
         let shouldRepeat = true
+
+        // This block runs once per second on the main run‑loop
         let callback: (Timer) -> Void = { [weak self] t in
             guard let self = self else { return }
             let remaining = end.timeIntervalSinceNow
             let clamped   = max(0, remaining)
             self.countdown = clamped
+
+            // When we hit zero, stop this timer and fire the expiration batch
             if clamped <= 0 {
                 t.invalidate()
-                print(" QuestQueueVM: failCurrent")
+
+                // ⚠️ EXPIRE any overdue quests in this system
+                // This will increment failedCount exactly once per quest
+                //self.expireOverdueQuests(self.lastProgressList, systemId: self.activeSystem.id)
                 self.failCurrent()
             }
         }
 
-        timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: shouldRepeat, block: callback)
+        // Schedule on the main run‑loop
+        timer = Timer.scheduledTimer(
+            withTimeInterval: interval,
+            repeats: shouldRepeat,
+            block: callback
+        )
     }
 
     private func stopTimer() {
