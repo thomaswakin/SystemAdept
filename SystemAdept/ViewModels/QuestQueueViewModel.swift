@@ -104,26 +104,18 @@ final class QuestQueueViewModel: ObservableObject {
 
     /// Mark the current quest as failed (expired).
     func failCurrent() {
-        print("QuestQueueVM: failCurrent run")
+        print("QQVM: failCurrent")
         guard
-            let uid   = Auth.auth().currentUser?.uid,
-            let qp    = current,
-            let qpId  = qp.id
+            let qp   = current,
+            qp.status == .available,      // ← only if was available
+            let qpId = qp.id
         else { return }
-
-        // If it’s already failed, don’t increment again
-        let newCount: Int
-        if qp.status == .failed {
-            newCount = qp.failedCount
-        } else {
-            newCount = qp.failedCount + 1
-        }
 
         let ref = userQuestProgressRef(aqsId: activeSystem.id, qpId: qpId)
         ref.updateData([
             "status":      QuestProgressStatus.failed.rawValue,
-            "failedCount": newCount
-        ]) { (err: Error?) in
+            "failedCount": FieldValue.increment(Int64(1))
+        ]) { err in
             if let e = err { print("❌ failCurrent error:", e) }
         }
         fetchQuestDetailAndRefresh()
@@ -233,9 +225,16 @@ final class QuestQueueViewModel: ObservableObject {
         // 6) Update current quest display
         if let next = progressList.first(where: { $0.status == .available }) {
             current = next
+            // start countdown timer for this quest
+            if let exp = next.expirationTime {
+                self.startTimer(until: exp)
+            } else {
+                self.stopTimer()
+            }
             fetchQuestDetail(for: next)
         } else {
             current = nil
+            self.stopTimer()
         }
     }
 
@@ -278,11 +277,13 @@ final class QuestQueueViewModel: ObservableObject {
         let shouldRepeat = true
         let callback: (Timer) -> Void = { [weak self] t in
             guard let self = self else { return }
+            print(" QuestQueueVM: inside callback")
             let remaining = end.timeIntervalSinceNow
             let clamped   = max(0, remaining)
             self.countdown = clamped
             if clamped <= 0 {
                 t.invalidate()
+                print(" QuestQueueVM: failCurrent")
                 self.failCurrent()
             }
         }

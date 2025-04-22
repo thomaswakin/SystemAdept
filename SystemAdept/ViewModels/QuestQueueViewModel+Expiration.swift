@@ -4,44 +4,46 @@
 //
 
 import Foundation
-import FirebaseFirestore
 import FirebaseAuth
+import FirebaseFirestore
 
 extension QuestQueueViewModel {
     /// Fails every QuestProgress whose expirationTime has passed.
-    /// - Parameters:
-    ///   - progressList: All loaded QuestProgress items
-    ///   - systemId: The ActiveQuestSystem.documentID
+    /// Queries only still-available quests that have truly expired, ensuring a single debuff each time.
     func expireOverdueQuests(_ progressList: [QuestProgress], systemId: String) {
-        print("QuestQueueVM+Exp: expireOverdueQuests \(progressList.count)")
-        let now = Date()
         guard let uid = Auth.auth().currentUser?.uid else { return }
+        // Use a local Firestore instance
+        let db = Firestore.firestore()
+        let now = Date()
+        let col = db
+            .collection("users").document(uid)
+            .collection("activeQuestSystems").document(systemId)
+            .collection("questProgress")
 
-        for qp in progressList {
-            // skip if not expired or already completed/failed
-            guard
-                let exp = qp.expirationTime,
-                exp < now,
-                qp.status != .completed,
-                qp.status != .failed,
-                let qpId = qp.id
-            else { continue }
+        // 1) Query all still-available quests whose expirationTime ≤ now
+        col
+            .whereField("status", isEqualTo: QuestProgressStatus.available.rawValue)
+            .whereField("expirationTime", isLessThanOrEqualTo: Timestamp(date: now))
+            .getDocuments { [weak self] snap, error in
+                guard let self = self, error == nil, let docs = snap?.documents else { return }
+                let batch = db.batch()
 
-            // build the path to this user’s questProgress doc
-            let qpRef = Firestore.firestore()
-                .collection("users").document(uid)
-                .collection("activeQuestSystems").document(systemId)
-                .collection("questProgress").document(qpId)
+                // 2) Mark each as failed exactly once
+                for doc in docs {
+                    batch.updateData([
+                        "status":      QuestProgressStatus.failed.rawValue,
+                        "failedAt":    FieldValue.serverTimestamp(),
+                    ], forDocument: doc.reference)
+                }
 
-            qpRef.updateData([
-                "status":       QuestProgressStatus.failed.rawValue,
-                "failedAt":     FieldValue.serverTimestamp(),
-                "failedCount":  FieldValue.increment(Int64(1))
-            ]) { error in
-                if let err = error {
-                    self.errorMessage = "Expire error: \(err.localizedDescription)"
+                // 3) Commit batch
+                batch.commit { err in
+                    if let err = err {
+                        self.errorMessage = err.localizedDescription
+                    }
                 }
             }
-        }
     }
 }
+
+
