@@ -23,7 +23,7 @@ final class ActiveSystemsViewModel: ObservableObject {
 
     /// Hold onto each QuestQueueViewModel so its periodicTimer isn't deallocated
     private var queueVMs: [String: QuestQueueViewModel] = [:]
-
+    
     // MARK: - Init / Deinit
     init() {
         startListening()
@@ -32,6 +32,8 @@ final class ActiveSystemsViewModel: ObservableObject {
     deinit {
         listener?.remove()
     }
+    
+    
 
     // MARK: - Listen for Active Systems
     private func startListening() {
@@ -115,10 +117,12 @@ final class ActiveSystemsViewModel: ObservableObject {
 
     // MARK: - User Actions
     func togglePause(system: ActiveQuestSystem) {
-        print("ActiveSystemVM: toogle pause \(system.id)")
-        let newStatus: SystemAssignmentStatus =
-            (system.status == .active) ? .paused : .active
-        updateStatus(aqsId: system.id, status: newStatus)
+        let queueVM = QuestQueueViewModel(activeSystem: system)
+        if system.status == .active {
+            queueVM.pauseSystem()
+        } else {
+            queueVM.resumeSystem()
+        }
     }
 
     func stop(system: ActiveQuestSystem) {

@@ -27,6 +27,14 @@ final class QuestQueueViewModel: ObservableObject {
     @Published var showAcceleratePrompt: Bool = false
     @Published var pendingNextRankQuestIDs: [String] = []
     
+    // MARK: – Pause State
+
+    /// True when the system’s ‘status’ in Firestore is `.paused`
+    @Published var isPaused: Bool = false
+
+    /// Listener for the parent ActiveQuestSystem document
+    private var systemListener: ListenerRegistration?
+    
     // Store latest expiration among the just‑completed rank
     private var latestExpirationForRank: Date?
     
@@ -49,6 +57,9 @@ final class QuestQueueViewModel: ObservableObject {
     // MARK: - Init / Deinit
     init(activeSystem: ActiveQuestSystem) {
         self.activeSystem = activeSystem
+        
+        // Listen for remote pause/unpause
+        setupSystemStatusListener()
         
         // Pull the system‐level defaultTimeToComplete
         let sysRef = activeSystem.questSystemRef
@@ -74,6 +85,7 @@ final class QuestQueueViewModel: ObservableObject {
     deinit {
         listener?.remove()
         timer?.invalidate()
+        systemListener?.remove()
         periodicTimer?.invalidate()
     }
 
@@ -172,6 +184,28 @@ final class QuestQueueViewModel: ObservableObject {
             
         }
     }
+    
+    // MARK: - system status listener
+    /// Watches the system’s own doc for `status` changes and flips `isPaused`
+    private func setupSystemStatusListener() {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        let sysRef = db
+            .collection("users").document(uid)
+            .collection("activeQuestSystems").document(activeSystem.id)
+
+        systemListener = sysRef.addSnapshotListener { [weak self] snap, _ in
+            guard
+                let self = self,
+                let data = snap?.data(),
+                let raw = data["status"] as? String,
+                let status = SystemAssignmentStatus(rawValue: raw)
+            else { return }
+
+            // Keep local flag in sync
+            self.isPaused = (status == .paused)
+        }
+    }
+    
     // MARK: - Listener
 
     private func setupListener() {
@@ -194,6 +228,7 @@ final class QuestQueueViewModel: ObservableObject {
     private func processSnapshot(_ snap: QuerySnapshot?, _ error: Error?) {
         // 1) Error handling
         print("QuestQueueVM: processSnapshot run")
+        guard !isPaused else { return }
         if let error = error {
             self.errorMessage = error.localizedDescription
             return
@@ -283,7 +318,10 @@ final class QuestQueueViewModel: ObservableObject {
 
         // This block runs once per second on the main run‑loop
         let callback: (Timer) -> Void = { [weak self] t in
-            guard let self = self else { return }
+            guard let self = self, !self.isPaused else {
+                t.invalidate()
+                return
+            }
             let remaining = end.timeIntervalSinceNow
             let clamped   = max(0, remaining)
             self.countdown = clamped
@@ -547,6 +585,7 @@ final class QuestQueueViewModel: ObservableObject {
     func refreshAvailableQuests() {
         print("QuestQueueVM: refreshAvailableQuests")
         guard let uid = Auth.auth().currentUser?.uid else { return }
+        guard !isPaused else { return }
         
         let now = Date()
         let col = db
@@ -623,6 +662,7 @@ final class QuestQueueViewModel: ObservableObject {
     /// Automatically unlock the next quest rank (no prompt), run on a timer.
     private func periodicUnlockNextRank() {
         guard let uid = Auth.auth().currentUser?.uid else { return }
+        guard !isPaused else { return }
         let col = db
             .collection("users").document(uid)
             .collection("activeQuestSystems").document(activeSystem.id)
@@ -708,6 +748,104 @@ final class QuestQueueViewModel: ObservableObject {
             }
         }
     }
+    
+    // MARK: - Pause / Resume System
+
+    /// Temporarily pause this quest system:
+    ///  • Locks every quest that’s currently `.available` or `.failed`
+    ///  • Deletes its `availableAt` & `expirationTime` so the Quest Queue never picks it back up
+    func pauseSystem() {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        let db = Firestore.firestore()
+        
+        // 1) Stop any running timer
+        stopTimer()
+
+        // 2) Lock & clear timings on both available *and* already-failed quests
+        let qpCol = db
+          .collection("users").document(uid)
+          .collection("activeQuestSystems").document(activeSystem.id)
+          .collection("questProgress")
+
+        qpCol
+          .whereField("status", in: [
+            QuestProgressStatus.available.rawValue,
+            QuestProgressStatus.failed.rawValue
+          ])
+          .getDocuments { snap, err in
+            guard err == nil, let docs = snap?.documents else { return }
+            let batch = db.batch()
+            for doc in docs {
+                batch.updateData([
+                    "status":         QuestProgressStatus.locked.rawValue,
+                    "availableAt":    FieldValue.delete(),
+                    "expirationTime": FieldValue.delete(),
+                    "failedAt":       FieldValue.delete()
+                ], forDocument: doc.reference)
+            }
+            batch.commit()
+        }
+
+        // 3) Mark the system itself as paused
+        let sysRef = db
+          .collection("users").document(uid)
+          .collection("activeQuestSystems").document(activeSystem.id)
+        sysRef.updateData([
+          "status": SystemAssignmentStatus.paused.rawValue
+        ])
+        
+        // 4) Mark system paused
+        isPaused = true
+    }
+
+    /// Resume this quest system:
+    /// 1) Mark the system active
+    /// 2) Re-activate any quests that were paused (locked with no timestamps)
+    ///    by making them .available with a fresh timer window.
+    func resumeSystem() {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        let db = Firestore.firestore()
+
+        // 1) Flip the system doc back to active
+        let sysRef = db
+          .collection("users").document(uid)
+          .collection("activeQuestSystems").document(activeSystem.id)
+        sysRef.updateData(["status": SystemAssignmentStatus.active.rawValue])
+
+        // 2) Find every quest we paused (locked with no availableAt)…
+        let qpCol = db
+          .collection("users").document(uid)
+          .collection("activeQuestSystems").document(activeSystem.id)
+          .collection("questProgress")
+
+        qpCol
+          .whereField("status", isEqualTo: QuestProgressStatus.locked.rawValue)
+          .getDocuments { [weak self] snap, err in
+            guard let self = self, err == nil, let docs = snap?.documents else { return }
+            let batch = db.batch()
+            let now = Date()
+
+            for doc in docs {
+                // Reconstruct the QuestProgress so you can lookup rank
+                guard let qp = try? doc.data(as: QuestProgress.self) else { continue }
+                let rank = self.rank(of: qp)
+                let duration = self.defaultDuration(forRank: rank)
+
+                batch.updateData([
+                    "status":         QuestProgressStatus.available.rawValue,
+                    "availableAt":    Timestamp(date: now),
+                    "expirationTime": Timestamp(date: now.addingTimeInterval(duration))
+                ], forDocument: doc.reference)
+            }
+
+            // 3) Commit all at once
+            batch.commit { _ in
+                // 4) Fire your normal expire/refresh to pick them up immediately
+                self.refreshAvailableQuests()
+            }
+        }
+    }
+    
 }
 
 

@@ -12,6 +12,7 @@ extension QuestQueueViewModel {
     /// Queries only still-available quests that have truly expired, ensuring a single debuff each time.
     func expireOverdueQuests(_ progressList: [QuestProgress], systemId: String) {
         guard let uid = Auth.auth().currentUser?.uid else { return }
+        guard !isPaused else { return }
         // Use a local Firestore instance
         let db = Firestore.firestore()
         let now = Date()
