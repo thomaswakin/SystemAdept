@@ -45,16 +45,28 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
+				"Views/AuthView 2.backup",
 			);
 			target = EF7BACCB2D986F3700532E98 /* SystemAdept */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
+		EFEC29552DBAD892002AC75F /* Exceptions for "SystemAdept" folder in "Compile Sources" phase from "SystemAdept" target */ = {
+			isa = PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet;
+			buildPhase = EF7BACC82D986F3700532E98 /* Sources */;
+			membershipExceptions = (
+				"Views/AuthView 2.backup",
+			);
+		};
+/* End PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		EF7BACCE2D986F3700532E98 /* SystemAdept */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				EF7BAD0A2D9897F600532E98 /* Exceptions for "SystemAdept" folder in "SystemAdept" target */,
+				EFEC29552DBAD892002AC75F /* Exceptions for "SystemAdept" folder in "Compile Sources" phase from "SystemAdept" target */,
 			);
 			path = SystemAdept;
 			sourceTree = "<group>";

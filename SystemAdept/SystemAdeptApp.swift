@@ -32,27 +32,18 @@ struct SystemAdeptApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ZStack {
-                // 1️⃣ Global background
-                themeManager.theme.backgroundImage
-                  .ignoresSafeArea()
+          ZStack {
+            themeManager.theme.backgroundImage
+              .ignoresSafeArea()
 
-                // 2️⃣ Real AuthView in place of the placeholder
-                AuthView()
-                  .environmentObject(authVM)
-                  .environmentObject(themeManager)
-                  .background(Color.clear)                       // clear any default fill
-                  .padding(.horizontal, themeManager.theme.spacingMedium)
-            }
-            .ignoresSafeArea()
-        }
-        .onChange(of: scenePhase) { newPhase in
-            if newPhase == .active {
-                // Run maintenance for each active system
-                for system in activeSystemsVM.activeSystems {
-                    QuestQueueViewModel.runMaintenance(for: system)
-                }
-            }
+            AuthView()
+            .environmentObject(authVM)
+            .environmentObject(themeManager)
+          }
+          .scrollContentBackground(.hidden)
+          .toolbarBackground(.hidden)
+          .background(Color.clear)            // make the nav container transparent
+          .ignoresSafeArea()
         }
     }
 }

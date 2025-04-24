@@ -17,6 +17,12 @@
   "spacingMedium":  8,
   "spacingLarge":   16
   
+  "primaryTextColorHex":       "263238",
+  "secondaryTextColorHex":     "607D8B",
+  "accentPrimaryHex":          "FFB300",
+  "accentSecondaryHex":        "00838F",
+  "overlayBackgroundRGBA":     [255, 255, 255, 0.8]
+  
   //background
   "backgroundImageName": "background"
 }

@@ -27,21 +27,26 @@ final class ThemeManager: ObservableObject {
         } else {
             // Fallback defaults
             self.theme = Theme(
-                primaryColorHex:   "1E88E5",
-                secondaryColorHex: "424242",
-                accentColorHex:    "FFC107",
-                headingFontName:   "Copperplate",
-                bodyFontName:      "Futura-Medium",
-                cornerRadius:      8,
-                iconSetName:       "DefaultIcons",
-                backgroundImageName: "background",
-                fontSizeVerySmall: 8,
-                fontSizeSmall:     12,
-                fontSizeMedium:    16,
-                fontSizeLarge:     24,
-                spacingSmall:      4,
-                spacingMedium:     8,
-                spacingLarge:      16
+                primaryColorHex:        "1E88E5",
+                secondaryColorHex:      "424242",
+                accentColorHex:         "FFC107",
+                primaryTextColorHex:    "263238",
+                secondaryTextColorHex:  "607D8B",
+                accentPrimaryHex:       "FFB300",
+                accentSecondaryHex:     "00838F",
+                overlayBackgroundRGBA:  [255, 255, 255, 0.8],
+                headingFontName:        "Copperplate",
+                bodyFontName:           "Futura-Medium",
+                cornerRadius:           8,
+                iconSetName:            "DefaultIcons",
+                backgroundImageName:    "background",
+                fontSizeVerySmall:      8,
+                fontSizeSmall:          12,
+                fontSizeMedium:         16,
+                fontSizeLarge:          24,
+                spacingSmall:           4,
+                spacingMedium:          8,
+                spacingLarge:           16
             )
         }
 
