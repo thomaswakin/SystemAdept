@@ -230,4 +230,45 @@ final class MyQuestsViewModel: ObservableObject {
         completion(true)
         self.recomputeActiveQuests()
     }
+    
+    /// Returns the active quests, filtered by the UI’s `filter` value and sorted
+    /// by expiration or completion date, ascending/descending.
+    func filteredAndSorted(
+        filter: QuestFilter,
+        ascending: Bool
+    ) -> [ActiveQuest] {
+      let all = activeQuests
+
+      // 1) filter
+      let filtered: [ActiveQuest] = {
+          switch filter {
+          case .all:
+              return all.filter { s in
+                  s.progress.status == .available ||
+                  s.progress.status == .failed
+              }
+          case .today:
+              return all.filter {
+                  let s = $0.progress.status
+                  return (s == .available || s == .failed)
+                  && filter.matches($0.progress.expirationTime)
+              }
+          case .complete:
+              return all.filter { $0.progress.status == .completed }
+          }
+      }()
+
+      // 2) sort
+      return filtered.sorted { a, b in
+        // pick the right date
+        let d1 = (filter == .complete
+                  ? (a.progress.completedAt ?? .distantPast)
+                  : (a.progress.expirationTime ?? .distantPast))
+        let d2 = (filter == .complete
+                  ? (b.progress.completedAt ?? .distantPast)
+                  : (b.progress.expirationTime ?? .distantPast))
+        return ascending ? (d1 < d2) : (d1 > d2)
+      }
+    }
+    
 }

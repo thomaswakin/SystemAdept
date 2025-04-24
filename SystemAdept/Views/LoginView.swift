@@ -15,7 +15,7 @@ struct LoginView: View {
     @State private var isLoggedIn = false
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 20) {
                 TextField("Email", text: $email)
                     .textInputAutocapitalization(.never)
@@ -87,5 +87,6 @@ struct LoginView_Previews: PreviewProvider {
         NavigationStack {
             LoginView()
         }
+        .background(Color.clear)
     }
 }

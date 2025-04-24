@@ -16,7 +16,7 @@ struct RegisterView: View {
     @State private var isRegistered = false
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 20) {
                 // Email input field
                 TextField("Email", text: $email)

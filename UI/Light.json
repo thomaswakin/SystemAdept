@@ -1,0 +1,9 @@
+{
+  "primaryColorHex":   "1E88E5",
+  "secondaryColorHex": "424242",
+  "accentColorHex":    "FFC107",
+  "headingFontName":   "AvenirNext-Bold",
+  "bodyFontName":      "AvenirNext-Regular",
+  "cornerRadius":      8,
+  "iconSetName":       "DefaultIcons"
+}

@@ -124,5 +124,6 @@ struct EditProfileView_Previews: PreviewProvider {
         NavigationStack {
             EditProfileView()
         }
+        .background(Color.clear)
     }
 }

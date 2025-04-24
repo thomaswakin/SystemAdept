@@ -35,7 +35,7 @@ struct ContentView: View {
                     .cornerRadius(8)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color.white)
+                .background(Color.clear)
                 .navigationTitle("Home")
             } else {
                 // Display login/register options (assume you have these views)
@@ -47,10 +47,11 @@ struct ContentView: View {
                 }
                 .padding()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color.white)
+                .background(Color.clear)
                 .navigationTitle("System Adept")
             }
         }
+        .background(Color.clear)
         .onAppear {
             self.isAuthenticated = AuthService.shared.isUserLoggedIn()
         }

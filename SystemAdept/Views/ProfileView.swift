@@ -9,6 +9,7 @@ import SwiftUI
 
 struct ProfileView: View {
     @EnvironmentObject var authVM: AuthViewModel
+    @EnvironmentObject private var themeManager: ThemeManager
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: true) {
@@ -17,10 +18,10 @@ struct ProfileView: View {
                     // MARK: Header
                     VStack(alignment: .leading, spacing: 4) {
                         Text(user.name)
-                            .font(.largeTitle)
+                            .font(themeManager.theme.headingMediumFont)
                             .bold()
                         Text(user.email)
-                            .font(.subheadline)
+                            .font(themeManager.theme.bodySmallFont)
                             .foregroundColor(.secondary)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -33,56 +34,18 @@ struct ProfileView: View {
                     // MARK: Rest Cycle Section
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Rest Cycle")
-                            .font(.headline)
+                            .font(themeManager.theme.headingMediumFont)
                         Text(String(format: "%02d:%02d – %02d:%02d",
                                     user.restStartHour, user.restStartMinute,
                                     user.restEndHour,   user.restEndMinute))
+                            .font(themeManager.theme.bodySmallFont)
                         NavigationLink("Edit Rest Cycle") {
                             RestCycleSettingsView()
                         }
+                        .font(themeManager.theme.bodySmallFont)
                     }
                     .padding(.horizontal)
 
-//                    // MARK: Skill Points Section
-//                    VStack(alignment: .leading, spacing: 16) {
-//                        Text("Skill Points")
-//                            .font(.title2)
-//                            .bold()
-//                            .padding(.horizontal)
-//
-//                        // Agility
-//                        Text("Agility")
-//                            .font(.headline)
-//                            .padding(.horizontal)
-//                        StatsList(items: [
-//                            ("Speed", display(user.agility.speed)),
-//                            ("Balance", display(user.agility.balance)),
-//                            ("Flexibility", display(user.agility.flexibility))
-//                        ], indent: 24)
-//
-//                        // Strength
-//                        Text("Strength")
-//                            .font(.headline)
-//                            .padding(.horizontal)
-//                        StatsList(items: [
-//                            ("Core", display(user.strength.core)),
-//                            ("Lower Body", display(user.strength.lowerBody)),
-//                            ("Upper Body", display(user.strength.upperBody))
-//                        ], indent: 24)
-//
-//                        // Attributes (Power & Stamina included)
-//                        Text("Attributes")
-//                            .font(.headline)
-//                            .padding(.horizontal)
-//                        StatsList(items: [
-//                            ("Focus", display(user.focus)),
-//                            ("Initiative", display(user.initiative)),
-//                            ("Discipline", display(user.discipline)),
-//                            ("Power", display(user.power)),
-//                            ("Stamina", display(user.stamina))
-//                        ], indent: 24)
-//                    }
-//                    .padding(.horizontal)
                 }
                 .padding(.vertical)
             } else {
@@ -104,6 +67,7 @@ struct ProfileView: View {
                     catch { print("Logout failed:", error) }
                 }
                 .foregroundColor(.red)
+                .font(themeManager.theme.headingSmallFont)
             }
         }
     }

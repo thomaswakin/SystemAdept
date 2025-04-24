@@ -1,34 +1,45 @@
-//
-//  AuthView.swift
-//  SystemAdept
-//
-//  Created by Thomas Akin on 4/14/25.
-//
-
-
 import SwiftUI
 
 struct AuthView: View {
-  @EnvironmentObject var authVM: AuthViewModel
-  @State private var showLogin = true
+    @State private var showLogin = true
+    @EnvironmentObject private var authVM: AuthViewModel
+    @EnvironmentObject private var themeManager: ThemeManager
 
-  var body: some View {
-    NavigationView {
-      VStack {
-        Picker("", selection: $showLogin) {
-          Text("Login").tag(true)
-          Text("Register").tag(false)
-        }
-        .pickerStyle(SegmentedPickerStyle())
-        .padding()
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: themeManager.theme.spacingMedium) {
+                Picker("", selection: $showLogin) {
+                    Text("Login").tag(true)
+                    Text("Register").tag(false)
+                }
+                .pickerStyle(.segmented)
+                .padding(themeManager.theme.paddingMedium)
 
-        if showLogin {
-          LoginView()
-        } else {
-          RegisterView()
+                if showLogin {
+                    LoginView()
+                        .background(Color.clear)
+                } else {
+                    RegisterView()
+                        .background(Color.clear)
+                }
+
+                Spacer()
+            }
+            .padding(.horizontal, themeManager.theme.paddingMedium)
+            .background(Color.clear)
+            .navigationTitle(showLogin ? "Login" : "Register")
+            .navigationBarTitleDisplayMode(.inline)
         }
-      }
-      .navigationTitle(showLogin ? "Login" : "Register")
+        .background(Color.clear)
+        .ignoresSafeArea(edges: .bottom)
     }
-  }
 }
+
+struct AuthView_Previews: PreviewProvider {
+    static var previews: some View {
+        AuthView()
+            .environmentObject(AuthViewModel())
+            .environmentObject(ThemeManager())
+    }
+}
+

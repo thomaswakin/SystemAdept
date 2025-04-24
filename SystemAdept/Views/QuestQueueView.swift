@@ -11,6 +11,7 @@ struct QuestQueueView: View {
     let activeSystem: ActiveQuestSystem
     @StateObject private var viewModel: QuestQueueViewModel
     @State private var showCompletionAlert = false
+    @EnvironmentObject private var themeManager: ThemeManager
 
     init(activeSystem: ActiveQuestSystem) {
         self.activeSystem = activeSystem
@@ -44,7 +45,7 @@ struct QuestQueueView: View {
     private func availableQuestView(quest: Quest) -> some View {
         VStack(spacing: 16) {
             Text(quest.questName)
-                .font(.title2).bold()
+                .font(themeManager.theme.headingSmallFont).bold()
             Text(quest.questPrompt)
                 .multilineTextAlignment(.center)
             Text("Time left: \(Int(viewModel.countdown))s")
@@ -71,7 +72,7 @@ struct QuestQueueView: View {
     ) -> some View {
         VStack(spacing: 16) {
             Text(quest.questName)
-                .font(.title2).bold()
+                .font(themeManager.theme.headingMediumFont).bold()
                 .foregroundColor(.red)
             Text("This quest has expired.")
                 .foregroundColor(.secondary)

@@ -1,0 +1,22 @@
+{
+  "primaryColorHex":   "1E88E5",
+  "secondaryColorHex": "424242",
+  "accentColorHex":    "FFC107",
+  "headingFontName":   "CourierNewPS-BoldMT",
+  "bodyFontName":      "KohinoorBangla-Light",
+  "cornerRadius":      8,
+  "iconSetName":       "DefaultIcons"
+  
+  // Font sizes
+  "fontSizeSmall":  12,
+  "fontSizeMedium": 16,
+  "fontSizeLarge":  24
+  
+  // spacing
+  "spacingSmall":   4,
+  "spacingMedium":  8,
+  "spacingLarge":   16
+  
+  //background
+  "backgroundImageName": "background"
+}

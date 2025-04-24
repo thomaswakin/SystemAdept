@@ -12,6 +12,7 @@ struct RestCycleSettingsView: View {
     // MARK: Environment
     @Environment(\.presentationMode) private var presentationMode
     @EnvironmentObject private var authVM: AuthViewModel
+    @EnvironmentObject private var themeManager: ThemeManager
 
     // MARK: State
     @State private var startTime = Date()
@@ -48,6 +49,7 @@ struct RestCycleSettingsView: View {
                 saveRestCycle()
             }
             .disabled(uid == nil)
+            .font(themeManager.theme.bodySmallFont)
         }
         .navigationTitle("Rest Cycle")
         .onAppear {
