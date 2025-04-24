@@ -20,23 +20,16 @@ struct AuthView: View {
                     .scaledToFill()
                     .ignoresSafeArea()
 
-                // 2) Centered login/register UI
+                // 2) Centered login/register UI with extra top padding
                 VStack(spacing: themeManager.theme.spacingMedium) {
-                    Spacer(minLength: themeManager.theme.spacingLarge)
-
-                    // Segmented control tinted with accentPrimary color and themed font
                     Picker("", selection: $showLogin) {
                         Text("Login").tag(true)
-                            .tint(themeManager.theme.accentPrimary)
-                            .font(themeManager.theme.bodySmallFont)
                         Text("Register").tag(false)
-                            .tint(themeManager.theme.accentPrimary)
-                            .font(themeManager.theme.bodySmallFont)
                     }
                     .pickerStyle(.segmented)
                     .tint(themeManager.theme.accentPrimary)
                     .font(themeManager.theme.bodySmallFont)
-                    .padding(themeManager.theme.spacingMedium)
+                    .padding(.bottom, themeManager.theme.spacingMedium)
 
                     // Show Login or Register form
                     Group {
@@ -47,21 +40,28 @@ struct AuthView: View {
                         }
                     }
                     .background(Color.clear)
-                    .padding(.top, themeManager.theme.spacingMedium)
-                    .foregroundColor(themeManager.theme.primaryTextColor)
 
                     Spacer()
                 }
+                .padding(.top, themeManager.theme.spacingLarge * 10)  // push below notch
                 .padding(.horizontal, themeManager.theme.spacingMedium)
                 .frame(maxWidth: 400)
             }
             .navigationTitle(showLogin ? "Login" : "Register")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(.hidden, for: .navigationBar)  // iOS 16+ transparent bar
+            .toolbarBackground(.hidden, for: .navigationBar)
         }
-        // Global theming: accent and text colors
+        // Global theming
         .accentColor(themeManager.theme.accentPrimary)
         .font(themeManager.theme.bodyMediumFont)
         .foregroundColor(themeManager.theme.primaryTextColor)
+    }
+}
+
+struct AuthView_Previews: PreviewProvider {
+    static var previews: some View {
+        AuthView()
+            .environmentObject(AuthViewModel())
+            .environmentObject(ThemeManager())
     }
 }

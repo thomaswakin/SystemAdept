@@ -14,83 +14,106 @@ struct RegisterView: View {
     @State private var confirmPassword = ""
     @State private var errorMessage = ""
     @State private var isRegistered = false
-    
+
+    @EnvironmentObject private var authVM: AuthViewModel
+    @EnvironmentObject private var themeManager: ThemeManager
+
     var body: some View {
         NavigationStack {
-            VStack(spacing: 20) {
+            VStack(spacing: themeManager.theme.spacingMedium) {
+                Spacer(minLength: themeManager.theme.spacingLarge)
+
                 // Email input field
                 TextField("Email", text: $email)
                     .textInputAutocapitalization(.never)
                     .keyboardType(.emailAddress)
-                    .padding()
-                    .background(Color.gray.opacity(0.2))
-                    .cornerRadius(8)
-                
+                    .padding(themeManager.theme.paddingMedium)
+                    .background(themeManager.theme.overlayBackground)
+                    .cornerRadius(themeManager.theme.cornerRadius)
+                    .font(themeManager.theme.bodyMediumFont)
+                    .foregroundColor(themeManager.theme.primaryTextColor)
+
                 // Password input field
                 SecureField("Password", text: $password)
-                    .padding()
-                    .background(Color.gray.opacity(0.2))
-                    .cornerRadius(8)
-                
+                    .padding(themeManager.theme.paddingMedium)
+                    .background(themeManager.theme.overlayBackground)
+                    .cornerRadius(themeManager.theme.cornerRadius)
+                    .font(themeManager.theme.bodyMediumFont)
+                    .foregroundColor(themeManager.theme.primaryTextColor)
+
                 // Confirm password input field
                 SecureField("Confirm Password", text: $confirmPassword)
-                    .padding()
-                    .background(Color.gray.opacity(0.2))
-                    .cornerRadius(8)
-                
+                    .padding(themeManager.theme.paddingMedium)
+                    .background(themeManager.theme.overlayBackground)
+                    .cornerRadius(themeManager.theme.cornerRadius)
+                    .font(themeManager.theme.bodyMediumFont)
+                    .foregroundColor(themeManager.theme.primaryTextColor)
+
                 // Error message display
                 if !errorMessage.isEmpty {
                     Text(errorMessage)
+                        .font(themeManager.theme.bodySmallFont)
                         .foregroundColor(.red)
                         .multilineTextAlignment(.center)
-                        .padding(.horizontal)
+                        .padding(.horizontal, themeManager.theme.paddingMedium)
                 }
-                
+
                 // Register button
                 Button(action: {
                     register()
                 }) {
                     Text("Register")
+                        .font(themeManager.theme.bodyMediumFont)
                         .foregroundColor(.white)
-                        .padding()
+                        .padding(.vertical, themeManager.theme.spacingSmall)
                         .frame(maxWidth: .infinity)
-                        .background(Color.blue)
-                        .cornerRadius(8)
                 }
-                
+                .buttonStyle(.borderedProminent)
+                .tint(themeManager.theme.accentSecondary)
+                .cornerRadius(themeManager.theme.cornerRadius)
+
+                // Navigation on success
                 NavigationLink(destination: ContentView(), isActive: $isRegistered) {
                     EmptyView()
                 }
+
+                Spacer()
             }
-            .padding()
+            .padding(.horizontal, themeManager.theme.paddingMedium)
+            .frame(maxWidth: 400)
             .navigationTitle("Register")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.hidden, for: .navigationBar)
         }
+        // Apply global theming
+        .accentColor(themeManager.theme.accentSecondary)
+        .font(themeManager.theme.bodyMediumFont)
+        .foregroundColor(themeManager.theme.primaryTextColor)
     }
-    
+
     private func register() {
-        guard !email.isEmpty, !password.isEmpty, !confirmPassword.isEmpty else {
+        guard !email.isEmpty,
+              !password.isEmpty,
+              !confirmPassword.isEmpty else {
             errorMessage = "Please fill in all fields."
             return
         }
-        
+
         guard password == confirmPassword else {
             errorMessage = "Passwords do not match."
             return
         }
-        
-        Auth.auth().createUser(withEmail: email, password: password) { authResult, error in
+
+        Auth.auth().createUser(withEmail: email, password: password) { result, error in
             if let error = error {
                 errorMessage = error.localizedDescription
                 return
             }
-            
-            if let user = authResult?.user {
-                // Ensure a default profile exists for the new user.
-                UserProfileService.shared.ensureUserProfile(for: user.uid, email: user.email ?? "") { profile, error in
-                    if let error = error {
-                        errorMessage = error.localizedDescription
+            if let user = result?.user {
+                UserProfileService.shared.ensureUserProfile(for: user.uid, email: user.email ?? "") { profile, err in
+                    if let err = err {
+                        errorMessage = err.localizedDescription
                     } else {
-                        print("User profile ensured for \(user.uid)")
                         DispatchQueue.main.async {
                             self.isRegistered = true
                         }
@@ -103,6 +126,11 @@ struct RegisterView: View {
 
 struct RegisterView_Previews: PreviewProvider {
     static var previews: some View {
-        RegisterView()
+        NavigationStack {
+            RegisterView()
+                .environmentObject(AuthViewModel())
+                .environmentObject(ThemeManager())
+        }
+        .background(Color.clear)
     }
 }
