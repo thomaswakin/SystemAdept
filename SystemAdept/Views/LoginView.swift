@@ -69,7 +69,7 @@ struct LoginView: View {
                     .frame(maxWidth: .infinity)
 
                     // Navigation on success
-                    NavigationLink(destination: ContentView(), isActive: $isLoggedIn) {
+                    NavigationLink(destination: MainTabView(), isActive: $isLoggedIn) {
                         EmptyView()
                     }
 
@@ -78,8 +78,9 @@ struct LoginView: View {
                 .padding(.horizontal, themeManager.theme.spacingMedium)
                 .frame(maxWidth: 400)
             }
-            .navigationTitle("Login")
+            .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
+            .font(themeManager.theme.headingMediumFont)
             .toolbarBackground(.hidden, for: .navigationBar)
         }
         // Apply global theming

@@ -10,53 +10,93 @@ import FirebaseAuth
 
 struct ContentView: View {
     @State private var isAuthenticated = AuthService.shared.isUserLoggedIn()
-    
+    @EnvironmentObject private var themeManager: ThemeManager
+
     var body: some View {
         NavigationStack {
-            if isAuthenticated {
-                // Main content for authenticated users
-                VStack(spacing: 20) {
-                    Text("Welcome to System Adept!")
-                        .font(.largeTitle)
-                        .foregroundColor(.black)
-                    
-                    NavigationLink("Edit Profile", destination: EditProfileView())
-                        .padding()
-                        .background(Color.blue)
-                        .foregroundColor(.white)
-                        .cornerRadius(8)
-                    
-                    Button("Sign Out") {
-                        signOut()
+            ZStack {
+                // Full-screen themed background
+                themeManager.theme.backgroundImage
+                    .resizable()
+                    .scaledToFill()
+                    .ignoresSafeArea()
+
+                // Main content
+                if isAuthenticated {
+                    VStack(spacing: themeManager.theme.spacingMedium) {
+                        Spacer(minLength: themeManager.theme.spacingLarge)
+
+                        // Welcome headline
+                        Text("Welcome to System Adept!")
+                            .font(themeManager.theme.headingLargeFont)
+                            .foregroundColor(themeManager.theme.primaryTextColor)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, themeManager.theme.spacingMedium)
+
+                        // Edit Profile button
+                        NavigationLink(destination: EditProfileView()) {
+                            Text("Edit Profile")
+                                .font(themeManager.theme.bodyMediumFont)
+                                .foregroundColor(.white)
+                                .padding(.vertical, themeManager.theme.spacingSmall)
+                                .frame(maxWidth: .infinity)
+                                .background(themeManager.theme.accentPrimary)
+                                .cornerRadius(themeManager.theme.cornerRadius)
+                        }
+
+                        // Sign Out button
+                        Button(action: signOut) {
+                            Text("Sign Out")
+                                .font(themeManager.theme.bodyMediumFont)
+                                .foregroundColor(.white)
+                                .padding(.vertical, themeManager.theme.spacingSmall)
+                                .frame(maxWidth: .infinity)
+                                .background(themeManager.theme.accentSecondary)
+                                .cornerRadius(themeManager.theme.cornerRadius)
+                        }
+
+                        Spacer()
                     }
-                    .foregroundColor(.white)
-                    .padding()
-                    .background(Color.red)
-                    .cornerRadius(8)
+                    .padding(.horizontal, themeManager.theme.spacingMedium)
+                    .frame(maxWidth: 400)
+                } else {
+                    // Not authenticated: show Login / Register options
+                    VStack(spacing: themeManager.theme.spacingMedium) {
+                        Spacer(minLength: themeManager.theme.spacingLarge)
+
+                        NavigationLink("Login", destination: LoginView())
+                            .buttonStyle(.borderedProminent)
+                            .tint(themeManager.theme.accentPrimary)
+
+                        NavigationLink("Register", destination: RegisterView())
+                            .buttonStyle(.borderedProminent)
+                            .tint(themeManager.theme.accentSecondary)
+
+                        Spacer()
+                    }
+                    .padding(.horizontal, themeManager.theme.spacingMedium)
+                    .frame(maxWidth: 400)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color.clear)
-                .navigationTitle("Home")
-            } else {
-                // Display login/register options (assume you have these views)
-                VStack(spacing: 20) {
-                    NavigationLink("Login", destination: LoginView())
-                        .buttonStyle(.borderedProminent)
-                    NavigationLink("Register", destination: RegisterView())
-                        .buttonStyle(.borderedProminent)
-                }
-                .padding()
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color.clear)
-                .navigationTitle("System Adept")
             }
+            // Remove default nav title
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    EmptyView()
+                }
+            }
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.hidden, for: .navigationBar)
         }
-        .background(Color.clear)
+        // Apply global theme styles
+        .accentColor(themeManager.theme.accentPrimary)
+        .font(themeManager.theme.bodyMediumFont)
+        .foregroundColor(themeManager.theme.primaryTextColor)
         .onAppear {
             self.isAuthenticated = AuthService.shared.isUserLoggedIn()
         }
     }
-    
+
     private func signOut() {
         do {
             try AuthService.shared.signOut()
@@ -70,5 +110,7 @@ struct ContentView: View {
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         ContentView()
+            .environmentObject(ThemeManager())
     }
 }
+

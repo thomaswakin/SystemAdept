@@ -35,6 +35,7 @@ struct Theme: Decodable {
     let fontSizeSmall: CGFloat
     let fontSizeMedium: CGFloat
     let fontSizeLarge: CGFloat
+    let fontSizeXtraLarge: CGFloat
 
     // Padding shorthand
     let spacingSmall: CGFloat
@@ -49,7 +50,7 @@ struct Theme: Decodable {
         case headingFontName, bodyFontName
         case cornerRadius
         case iconSetName, backgroundImageName
-        case fontSizeVerySmall, fontSizeSmall, fontSizeMedium, fontSizeLarge
+        case fontSizeVerySmall, fontSizeSmall, fontSizeMedium, fontSizeLarge, fontSizeXtraLarge
         case spacingSmall, spacingMedium, spacingLarge
     }
 
@@ -96,6 +97,7 @@ struct Theme: Decodable {
     var headingSmallFont:     Font { .custom(headingFontName, size: fontSizeSmall) }
     var headingMediumFont:    Font { .custom(headingFontName, size: fontSizeMedium) }
     var headingLargeFont:     Font { .custom(headingFontName, size: fontSizeLarge) }
+    var headingXtraLargeFont:     Font { .custom(headingFontName, size: fontSizeXtraLarge) }
 
     // MARK: - Padding shortcuts
     var paddingSmall:  CGFloat { spacingSmall }

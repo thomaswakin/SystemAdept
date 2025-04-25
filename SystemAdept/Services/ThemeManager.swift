@@ -44,6 +44,7 @@ final class ThemeManager: ObservableObject {
                 fontSizeSmall:          12,
                 fontSizeMedium:         16,
                 fontSizeLarge:          24,
+                fontSizeXtraLarge:      32,
                 spacingSmall:           4,
                 spacingMedium:          8,
                 spacingLarge:           16
@@ -53,6 +54,7 @@ final class ThemeManager: ObservableObject {
         // 2) Apply initial appearances
         applyNavigationBarAppearance()
         applyTabBarAppearance()
+        applySegmentedControlAppearance()
 
         // 3) Optionally fetch remote theme override
         fetchRemoteTheme()
@@ -83,16 +85,17 @@ final class ThemeManager: ObservableObject {
     /// Applies the current theme to UINavigationBar.
     func applyNavigationBarAppearance() {
         let appearance = UINavigationBarAppearance()
-        appearance.configureWithTransparentBackground()   // ← transparent instead of opaque
+        appearance.configureWithTransparentBackground()
 
-        let uiPrimary = UIColor(theme.primaryColor)
-        let navFont   = UIFont(
+        // Use your text color, not the background color!
+        let uiTextColor = UIColor(theme.primaryTextColor)
+        let navFont     = UIFont(
             name: theme.headingFontName,
             size: theme.fontSizeLarge
         ) ?? .systemFont(ofSize: theme.fontSizeLarge)
 
-        appearance.titleTextAttributes      = [
-          .foregroundColor: uiPrimary,
+        appearance.titleTextAttributes = [
+          .foregroundColor: uiTextColor,
           .font:            navFont
         ]
         appearance.largeTitleTextAttributes = appearance.titleTextAttributes
@@ -131,5 +134,41 @@ final class ThemeManager: ObservableObject {
         if #available(iOS 15.0, *) {
             UITabBar.appearance().scrollEdgeAppearance = appearance
         }
+    }
+    
+    func applySegmentedControlAppearance() {
+        // 1) Load your theme’s “bodySmallFont” so both states use the same font.
+        guard let segFont = UIFont(name: theme.bodyFontName, size: theme.fontSizeSmall) else {
+            print("⚠️ Couldn't load segmented font \(theme.bodyFontName)")
+            return
+        }
+
+        // 2) Define the appearance of un-selected segments:
+        let normalAttrs: [NSAttributedString.Key: Any] = [
+            .font: segFont,
+            // Text in its “off” state uses your theme’s secondaryTextColor
+            .foregroundColor: UIColor(theme.secondaryTextColor)
+        ]
+
+        // 3) Define the appearance of the selected segment:
+        let selectedAttrs: [NSAttributedString.Key: Any] = [
+            .font: segFont,
+            // When tapped/active, the segment’s title text uses your accentPrimary (the gold)
+            .foregroundColor: UIColor(theme.accentSecondary)
+        ]
+
+        // 4) Grab the global UISegmentedControl proxy
+        let seg = UISegmentedControl.appearance()
+
+        // 5) Apply the text attributes above:
+        seg.setTitleTextAttributes(normalAttrs,   for: .normal)   // off-state text
+        seg.setTitleTextAttributes(selectedAttrs, for: .selected) // on-state text
+
+        // 6) Finally, color the selected segment’s “pill” background itself:
+        //    this uses the same accentPrimary gold so it pops against the pale-blue.
+        seg.selectedSegmentTintColor = UIColor(theme.accentPrimary)
+        
+        // The rest of the control (i.e. all un-selected segments):
+        seg.backgroundColor = UIColor(theme.overlayBackground)
     }
 }

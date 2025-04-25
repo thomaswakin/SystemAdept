@@ -73,7 +73,7 @@ struct RegisterView: View {
                 .cornerRadius(themeManager.theme.cornerRadius)
 
                 // Navigation on success
-                NavigationLink(destination: ContentView(), isActive: $isRegistered) {
+                NavigationLink(destination: MainTabView(), isActive: $isRegistered) {
                     EmptyView()
                 }
 
@@ -81,7 +81,7 @@ struct RegisterView: View {
             }
             .padding(.horizontal, themeManager.theme.paddingMedium)
             .frame(maxWidth: 400)
-            .navigationTitle("Register")
+            .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(.hidden, for: .navigationBar)
         }

@@ -14,14 +14,29 @@ struct AuthView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // 1) Full-screen themed background
+                // 1) Background
                 themeManager.theme.backgroundImage
                     .resizable()
                     .scaledToFill()
                     .ignoresSafeArea()
 
-                // 2) Centered login/register UI with extra top padding
+                // 2) Content
                 VStack(spacing: themeManager.theme.spacingMedium) {
+                    Spacer()
+                        .frame(height: 80)
+                    // Custom title in-content, lower on screen
+                    // Full-width header bar
+                    Text(showLogin ? "Login" : "Register")
+                        .font(themeManager.theme.headingLargeFont)
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)                  // stretch across the container
+                        .padding(.vertical, themeManager.theme.spacingSmall)
+                        .background(themeManager.theme.secondaryTextColor).opacity(0.8)
+                        .padding(.horizontal, -themeManager.theme.spacingMedium)
+                        // note: negative padding to bleed into the screen edges
+                        // (or use .ignoresSafeArea(edges: .horizontal) on the bar)
+
+                    // Toggle Picker
                     Picker("", selection: $showLogin) {
                         Text("Login").tag(true)
                         Text("Register").tag(false)
@@ -29,9 +44,8 @@ struct AuthView: View {
                     .pickerStyle(.segmented)
                     .tint(themeManager.theme.accentPrimary)
                     .font(themeManager.theme.bodySmallFont)
-                    .padding(.bottom, themeManager.theme.spacingMedium)
+                    .padding(.vertical, themeManager.theme.spacingMedium)
 
-                    // Show Login or Register form
                     Group {
                         if showLogin {
                             LoginView()
@@ -39,22 +53,23 @@ struct AuthView: View {
                             RegisterView()
                         }
                     }
-                    .background(Color.clear)
 
                     Spacer()
                 }
-                .padding(.top, themeManager.theme.spacingLarge * 10)  // push below notch
                 .padding(.horizontal, themeManager.theme.spacingMedium)
                 .frame(maxWidth: 400)
             }
-            .navigationTitle(showLogin ? "Login" : "Register")
+            // 3) Remove default nav title
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    // Empty so UIKit doesn’t draw its own title
+                    EmptyView()
+                }
+            }
+            .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(.hidden, for: .navigationBar)
         }
-        // Global theming
-        .accentColor(themeManager.theme.accentPrimary)
-        .font(themeManager.theme.bodyMediumFont)
-        .foregroundColor(themeManager.theme.primaryTextColor)
     }
 }
 

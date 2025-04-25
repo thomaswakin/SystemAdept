@@ -14,62 +14,65 @@ struct ProfileView: View {
     var body: some View {
         ScrollView(.vertical, showsIndicators: true) {
             if let user = authVM.userProfile {
-                VStack(spacing: 24) {
-                    // MARK: Header
-                    VStack(alignment: .leading, spacing: 4) {
+                VStack(spacing: themeManager.theme.spacingMedium) {
+                    // Header: Name & Email
+                    VStack(alignment: .leading, spacing: themeManager.theme.spacingSmall) {
                         Text(user.name)
                             .font(themeManager.theme.headingMediumFont)
                             .bold()
+                            .foregroundColor(themeManager.theme.primaryTextColor)
                         Text(user.email)
                             .font(themeManager.theme.bodySmallFont)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(themeManager.theme.secondaryTextColor)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal)
+                    .padding(.horizontal, themeManager.theme.paddingMedium)
 
-                    // MARK: Aura (full‑width)
+                    // Aura stat
                     StatCard(title: "Aura", value: display(user.aura))
-                        .padding(.horizontal)
-                    
-                    // MARK: Rest Cycle Section
-                    VStack(alignment: .leading, spacing: 4) {
+                        .padding(.horizontal, themeManager.theme.paddingMedium)
+
+                    // Rest Cycle Section
+                    VStack(alignment: .leading, spacing: themeManager.theme.spacingSmall) {
                         Text("Rest Cycle")
                             .font(themeManager.theme.headingMediumFont)
-                        Text(String(format: "%02d:%02d – %02d:%02d",
-                                    user.restStartHour, user.restStartMinute,
-                                    user.restEndHour,   user.restEndMinute))
-                            .font(themeManager.theme.bodySmallFont)
-                        NavigationLink("Edit Rest Cycle") {
-                            RestCycleSettingsView()
-                        }
+                            .foregroundColor(themeManager.theme.primaryTextColor)
+                        Text(String(
+                            format: "%02d:%02d – %02d:%02d",
+                            user.restStartHour, user.restStartMinute,
+                            user.restEndHour,   user.restEndMinute
+                        ))
                         .font(themeManager.theme.bodySmallFont)
-                    }
-                    .padding(.horizontal)
+                        .foregroundColor(themeManager.theme.secondaryTextColor)
 
+                        NavigationLink {
+                            RestCycleSettingsView()
+                        } label: {
+                            Text("Edit Rest Cycle")
+                                .font(themeManager.theme.bodySmallFont)
+                                .foregroundColor(themeManager.theme.accentPrimary)
+                        }
+                    }
+                    .padding(.horizontal, themeManager.theme.paddingMedium)
                 }
-                .padding(.vertical)
+                .padding(.vertical, themeManager.theme.spacingMedium)
             } else {
                 // Loading state
-                VStack(spacing: 16) {
+                VStack(spacing: themeManager.theme.spacingMedium) {
                     ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: themeManager.theme.accentPrimary))
                     Text("Loading player…")
-                        .foregroundColor(.secondary)
+                        .font(themeManager.theme.bodySmallFont)
+                        .foregroundColor(themeManager.theme.secondaryTextColor)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .padding()
+                .padding(themeManager.theme.paddingMedium)
             }
         }
-        .navigationTitle("Player")
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button("Logout") {
-                    do { try authVM.signOut() }
-                    catch { print("Logout failed:", error) }
-                }
-                .foregroundColor(.red)
-                .font(themeManager.theme.headingSmallFont)
-            }
-        }
+        // Apply global theme
+        .accentColor(themeManager.theme.accentPrimary)
+        .font(themeManager.theme.bodyMediumFont)
+        .foregroundColor(themeManager.theme.primaryTextColor)
     }
 
     private func display(_ val: Int) -> String {
@@ -82,39 +85,55 @@ struct ProfileView: View {
 struct StatCard: View {
     let title: String
     let value: String
+    @EnvironmentObject private var themeManager: ThemeManager
 
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: themeManager.theme.spacingSmall) {
             Text(title)
-                .font(.caption)
-                .foregroundColor(.secondary)
+                .font(themeManager.theme.bodySmallFont)
+                .foregroundColor(themeManager.theme.secondaryTextColor)
             Text(value)
-                .font(.title2)
+                .font(themeManager.theme.bodyLargeFont)
                 .bold()
+                .foregroundColor(themeManager.theme.primaryTextColor)
         }
         .frame(maxWidth: .infinity, minHeight: 80)
-        .padding()
-        .background(Color(.secondarySystemBackground))
-        .cornerRadius(8)
+        .padding(themeManager.theme.paddingMedium)
+        .background(themeManager.theme.overlayBackground)
+        .cornerRadius(themeManager.theme.cornerRadius)
     }
 }
 
 struct StatsList: View {
     let items: [(String, String)]
     let indent: CGFloat
+    @EnvironmentObject private var themeManager: ThemeManager
 
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: themeManager.theme.spacingSmall) {
             ForEach(items, id: \.0) { label, value in
                 HStack {
-                    Text(label).font(.body)
+                    Text(label)
+                        .font(themeManager.theme.bodyMediumFont)
+                        .foregroundColor(themeManager.theme.primaryTextColor)
                     Spacer()
-                    Text(value).font(.body)
+                    Text(value)
+                        .font(themeManager.theme.bodyMediumFont)
+                        .foregroundColor(themeManager.theme.primaryTextColor)
                 }
                 .padding(.leading, indent)
-                .padding(.horizontal)
+                .padding(.horizontal, themeManager.theme.paddingMedium)
             }
         }
+    }
+}
+
+struct ProfileView_Previews: PreviewProvider {
+    static var previews: some View {
+        ProfileView()
+            .environmentObject(AuthViewModel())
+            .environmentObject(ThemeManager())
+            .background(Color.clear)
     }
 }
 
