@@ -8,150 +8,215 @@
 import SwiftUI
 
 struct MainTabView: View {
-    @EnvironmentObject var authVM: AuthViewModel
     @EnvironmentObject private var themeManager: ThemeManager
-    @State private var selectedTab: Tab = .player
+    @EnvironmentObject private var appState: AppState
 
-    enum Tab: Hashable {
-        case player, systems, quests
+    var body: some View {
+        Group {
+            // 1) While we’re still routing, show a loading spinner
+            if !appState.hasRouted {
+                VStack {
+                    Spacer()
+                    ProgressView("Loading…")
+                        .progressViewStyle(.circular)
+                    Spacer()
+                }
+            } else if
+                // 2) Once routed, unwrap our decision values
+                let selected = appState.selectedTab,
+                let initial   = appState.initialQuestPage
+            {
+                // 3) Show the real TabView
+                ZStack(alignment: .top) {
+                    themeManager.theme.backgroundImage
+                        .resizable()
+                        .scaledToFill()
+                        .ignoresSafeArea()
+                    
+                    TabView(selection: Binding(
+                        get: { selected },
+                        set: { appState.selectedTab = $0 }
+                    )) {
+                        QuestsTab(initialPage: initial)
+                            .tabItem { Label("Quests", systemImage: "flag.circle") }
+                            .tag(AppState.Tab.quests)
+                        
+                        SystemsTab()
+                            .tabItem { Label("Systems", systemImage: "checkmark.circle") }
+                            .tag(AppState.Tab.systems)
+                        
+                        PlayerTab()
+                            .tabItem { Label("Player", systemImage: "person.crop.circle") }
+                            .tag(AppState.Tab.player)
+                    }
+                    .background(Color.clear)
+                    .accentColor(themeManager.theme.accentColor)
+                    .font(themeManager.theme.bodyMediumFont)
+                    
+                    // 4) Banner overlay
+                    if let msg = appState.notificationMessage {
+                        NotificationBanner(message: msg)
+                            .padding(.top, themeManager.theme.spacingLarge)
+                            .transition(.move(edge: .top).combined(with: .opacity))
+                            .zIndex(1)
+                    }
+                }
+                .animation(.easeInOut, value: appState.notificationMessage)
+            }
+        }
     }
+}
+
+// … the rest of your PlayerTab, SystemsTab, QuestsTab, and InContentHeader stay unchanged …
+
+// MARK: - PlayerTab
+
+struct PlayerTab: View {
+    @EnvironmentObject private var themeManager: ThemeManager
 
     var body: some View {
         NavigationStack {
             ZStack {
-                // Full-screen background
                 themeManager.theme.backgroundImage
                     .resizable()
                     .scaledToFill()
                     .ignoresSafeArea()
-
-                TabView(selection: $selectedTab) {
-                    // Player/Profile Tab
-                    NavigationStack {
-                        VStack(spacing: themeManager.theme.spacingMedium) {
-                            // Header bar
-                            Text("Player")
-                                .font(themeManager.theme.headingLargeFont)
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, themeManager.theme.spacingSmall)
-                                .background(themeManager.theme.secondaryTextColor.opacity(0.8))
-                                .padding(.horizontal, -themeManager.theme.spacingMedium)
-
-                            ProfileView()
-                        }
-                        .padding(.horizontal, themeManager.theme.spacingMedium)
-                        .frame(maxWidth: 400)
-                        .background(Color.clear)
-                        .toolbar { ToolbarItem(placement: .principal) { EmptyView() } }
-                        .navigationTitle("")
-                        .navigationBarTitleDisplayMode(.inline)
-                        .toolbarBackground(.hidden, for: .navigationBar)
-                    }
-                    .tabItem { Label("Player", systemImage: "person.crop.circle") }
-                    .tag(Tab.player)
-
-                    // Systems Tab
-                    NavigationStack {
-                        VStack(spacing: themeManager.theme.spacingMedium) {
-                            // Header bar
-                            Text("Systems")
-                                .font(themeManager.theme.headingLargeFont)
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, themeManager.theme.spacingSmall)
-                                .background(themeManager.theme.secondaryTextColor.opacity(0.8))
-                                .padding(.horizontal, -themeManager.theme.spacingMedium)
-
-                            SystemsTabView()
-                        }
-                        .padding(.horizontal, themeManager.theme.spacingMedium)
-                        .frame(maxWidth: 400)
-                        .background(Color.clear)
-                        .toolbar { ToolbarItem(placement: .principal) { EmptyView() } }
-                        .navigationTitle("")
-                        .navigationBarTitleDisplayMode(.inline)
-                        .toolbarBackground(.hidden, for: .navigationBar)
-                    }
-                    .tabItem { Label("Systems", systemImage: "checkmark.circle") }
-                    .tag(Tab.systems)
-
-                    // Active Quests Tab
-                    NavigationStack {
-                        VStack(spacing: themeManager.theme.spacingMedium) {
-                            // Header bar
-                            Text("Active Quests")
-                                .font(themeManager.theme.headingLargeFont)
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, themeManager.theme.spacingSmall)
-                                .background(themeManager.theme.secondaryTextColor.opacity(0.8))
-                                .padding(.horizontal, -themeManager.theme.spacingMedium)
-
-                            MyQuestsView()
-                        }
-                        .padding(.horizontal, themeManager.theme.spacingMedium)
-                        .frame(maxWidth: 400)
-                        .background(Color.clear)
-                        .toolbar { ToolbarItem(placement: .principal) { EmptyView() } }
-                        .navigationTitle("")
-                        .navigationBarTitleDisplayMode(.inline)
-                        .toolbarBackground(.hidden, for: .navigationBar)
-                    }
-                    .tabItem { Label("Active Quests", systemImage: "flag.circle") }
-                    .tag(Tab.quests)
+                
+                VStack(spacing: themeManager.theme.spacingMedium) {
+                    InContentHeader(title: "Player")
+                    ProfileView()
                 }
-                .accentColor(themeManager.theme.accentColor)
-                .font(themeManager.theme.bodyMediumFont)
-                .background(Color.clear)
+                .padding(.horizontal, themeManager.theme.spacingMedium)
+                .frame(maxWidth: 400)
             }
-            .background(Color.clear)
+            .toolbar { ToolbarItem(placement: .principal) { EmptyView() } }
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.hidden, for: .navigationBar)
         }
-        .accentColor(themeManager.theme.accentColor)
-        .font(themeManager.theme.bodyMediumFont)
-        .foregroundColor(themeManager.theme.primaryTextColor)
     }
 }
 
-// MARK: - SystemsTabView
+// MARK: - SystemsTab
+
+struct SystemsTab: View {
+    @EnvironmentObject private var themeManager: ThemeManager
+    @EnvironmentObject private var activeSystemsVM: ActiveSystemsViewModel
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                themeManager.theme.backgroundImage
+                    .resizable()
+                    .scaledToFill()
+                    .ignoresSafeArea()
+                VStack(spacing: themeManager.theme.spacingMedium) {
+                    InContentHeader(title: "Systems")
+                    SystemsTabView()
+                }
+                .padding(.horizontal, themeManager.theme.spacingMedium)
+                .frame(maxWidth: 400)
+            }
+            .toolbar { ToolbarItem(placement: .principal) { EmptyView() } }
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.hidden, for: .navigationBar)
+        }
+    }
+}
+
+// MARK: - QuestsTab
+
+struct QuestsTab: View {
+    @EnvironmentObject private var themeManager: ThemeManager
+
+    /// Accept an initial page from the AppState.
+    let initialPage: MyQuestsView.Page
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                themeManager.theme.backgroundImage
+                    .resizable()
+                    .scaledToFill()
+                    .ignoresSafeArea()
+                VStack(spacing: themeManager.theme.spacingMedium) {
+                    InContentHeader(title: "Quests")
+                    MyQuestsView(initialPage: initialPage)
+                }
+                .padding(.horizontal, themeManager.theme.spacingMedium)
+                .frame(maxWidth: 400)
+            }
+            .toolbar { ToolbarItem(placement: .principal) { EmptyView() } }
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.hidden, for: .navigationBar)
+        }
+    }
+}
+
+// MARK: - In-Content Header Helper
+
+struct InContentHeader: View {
+    let title: String
+    @EnvironmentObject private var themeManager: ThemeManager
+
+    var body: some View {
+        Text(title)
+            .font(themeManager.theme.headingLargeFont)
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, themeManager.theme.spacingLarge)
+            .background(themeManager.theme.secondaryTextColor.opacity(0.8))
+            .padding(.horizontal, -themeManager.theme.spacingMedium)
+    }
+}
+
+// MARK: - SystemsTabView (unchanged)
 
 /// Combines ActiveSystemsView and QuestSystemListView under a segmented filter.
 struct SystemsTabView: View {
     @EnvironmentObject private var themeManager: ThemeManager
+    @EnvironmentObject private var activeSystemsVM: ActiveSystemsViewModel
+
     enum Filter: String, CaseIterable, Identifiable {
         case active    = "Active Systems"
         case available = "Available Systems"
         var id: String { rawValue }
     }
 
-    @State private var filter: Filter = .active
+    @State private var filter: Filter = .available
 
     var body: some View {
         VStack(spacing: themeManager.theme.spacingMedium) {
-            // Segmented Picker
+            // 1) Segmented control with explicit .tag(f)
             Picker("Show Systems", selection: $filter) {
                 ForEach(Filter.allCases) { f in
                     Text(f.rawValue)
                         .font(themeManager.theme.headingMediumFont)
-                        .foregroundColor(themeManager.theme.primaryTextColor)
+                        .foregroundColor(themeManager.theme.primaryColor)
+                        .tag(f)                // ← This is critical
                 }
             }
             .pickerStyle(.segmented)
             .tint(themeManager.theme.accentPrimary)
             .padding(.horizontal, themeManager.theme.paddingMedium)
-            .padding(.top, themeManager.theme.spacingMedium)
 
+            // 2) Switch on the filter so both branches get built
             Group {
-                switch filter {
-                case .active:
+                if filter == .active {
                     MySystemsListView()
-                case .available:
+                } else {
                     QuestSystemListView()
                 }
             }
             .background(Color.clear)
         }
-        .navigationTitle("")
+        .onAppear {
+            // If the user has any active systems, show “Active”; otherwise “Available”
+            filter = activeSystemsVM.activeSystems.isEmpty ? .available : .active
+        }
+        .navigationTitle("")                   // we do in-content header
+        .toolbar { ToolbarItem(placement: .principal) { EmptyView() } }
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.hidden, for: .navigationBar)
     }
@@ -162,7 +227,6 @@ struct MainTabView_Previews: PreviewProvider {
         MainTabView()
             .environmentObject(AuthViewModel())
             .environmentObject(ThemeManager())
-            .background(Color.clear)
     }
 }
 

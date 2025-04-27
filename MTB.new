@@ -1,0 +1,77 @@
+//  MainTabView.swift
+//  SystemAdept
+//
+//  Created by Thomas Akin on 4/14/25.
+//
+
+import SwiftUI
+
+struct MainTabView: View {
+    @EnvironmentObject private var themeManager: ThemeManager
+    @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var authVM: AuthViewModel
+    @EnvironmentObject private var activeSystemsVM: ActiveSystemsViewModel
+    @EnvironmentObject private var questsVM: MyQuestsViewModel
+
+    enum Tab: Hashable {
+        case player, systems, quests
+    }
+
+    var body: some View {
+        ZStack(alignment: .top) {
+            TabView(selection: $appState.selectedTab) {
+                NavigationStack {
+                    ProfileView()
+                }
+                .tag(Tab.player)
+                .tabItem {
+                    Label("Player", systemImage: "person.crop.circle")
+                }
+
+                NavigationStack {
+                    SystemsTabView()
+                }
+                .tag(Tab.systems)
+                .tabItem {
+                    Label("Systems", systemImage: "checkmark.circle")
+                }
+
+                NavigationStack {
+                    MyQuestsView()
+                        .navigationTitle(appState.initialQuestPage.title)
+                        .onAppear {
+                            // Optionally reset any per-page view state here
+                        }
+                }
+                .tag(Tab.quests)
+                .tabItem {
+                    Label("Quests", systemImage: "flag.circle")
+                }
+            }
+
+            // Banner notification overlay
+            if let message = appState.notificationMessage {
+                NotificationBanner(message: message)
+                    .padding(.top, themeManager.theme.spacingLarge)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .zIndex(1)
+            }
+        }
+        .animation(.easeInOut, value: appState.notificationMessage)
+        .toolbarBackground(.hidden, for: .navigationBar)
+    }
+}
+
+struct MainTabView_Previews: PreviewProvider {
+    static var previews: some View {
+        MainTabView()
+            .environmentObject(AuthViewModel())
+            .environmentObject(ThemeManager())
+            .environmentObject(ActiveSystemsViewModel())
+            .environmentObject(MyQuestsViewModel())
+            .environmentObject(AppState(
+                activeSystemsVM: ActiveSystemsViewModel(),
+                questsVM: MyQuestsViewModel()
+            ))
+    }
+}

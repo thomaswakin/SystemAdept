@@ -10,8 +10,8 @@ import Foundation
 
 /// Shared filter enum for MyQuestsView and ViewModel
 enum QuestFilter: String, CaseIterable, Identifiable {
-    case all      = "All"
     case today    = "Today"
+    case all      = "All"
     case complete = "Complete"
 
     var id: String { rawValue }
@@ -21,10 +21,10 @@ enum QuestFilter: String, CaseIterable, Identifiable {
         guard let date = date else { return false }
         let now = Date()
         switch self {
-        case .all:
-            return true
         case .today:
             return Calendar.current.isDate(date, inSameDayAs: now)
+        case .all:
+            return true
         case .complete:
             return true
         }

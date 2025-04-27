@@ -40,7 +40,7 @@ struct ActiveSystemsView: View {
     .listStyle(.plain)
     .scrollContentBackground(.hidden)  // iOS 16+
     .background(Color.clear)
-    .navigationTitle("My Systems")
+    .navigationTitle("")
     .navigationDestination(for: ActiveQuestSystem.self) { system in
       QuestQueueView(activeSystem: system)
     }

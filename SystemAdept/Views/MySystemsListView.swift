@@ -9,63 +9,44 @@
 import SwiftUI
 
 struct MySystemsListView: View {
-    @StateObject private var vm = ActiveSystemsViewModel()
-    @EnvironmentObject private var themeManager: ThemeManager
-    @State private var path: [ActiveQuestSystem] = []
+    @EnvironmentObject private var activeSystemsVM: ActiveSystemsViewModel
+    @EnvironmentObject private var themeManager:    ThemeManager
 
     var body: some View {
-        NavigationStack(path: $path) {
-            List(vm.activeSystems) { system in
+        List {
+            ForEach(activeSystemsVM.activeSystems) { system in
                 HStack {
-                    // Use a Button to push onto the path
-                    Button {
-                        path.append(system)
-                    } label: {
-                        Text(system.questSystemName)
-                            .font(themeManager.theme.bodyMediumFont)
-                    }
-
+                    Text(system.questSystemName)
+                        .font(themeManager.theme.bodyMediumFont)
                     Spacer()
-
-                    Button {
-                        vm.togglePause(system: system)
-                    } label: {
-                        Text(system.status == .active ? "Pause" : "Resume")
-                            .font(themeManager.theme.bodyMediumFont)
-                    }
-                    .buttonStyle(.bordered)
-
-                    Button {
-                        vm.stop(system: system)
-                    } label: {
-                        Text("Stop")
-                            .font(themeManager.theme.bodyMediumFont)
-                    }
-                    .buttonStyle(.borderedProminent)
+                    // show current status inline if you like
+                    Text(system.status.rawValue.capitalized)
+                        .font(themeManager.theme.bodySmallFont)
+                        .foregroundColor(themeManager.theme.secondaryColor)
                 }
                 .padding(.vertical, themeManager.theme.spacingSmall)
-            }
-            .listStyle(.plain)
-            .scrollContentBackground(.hidden)   // iOS 16+
-            .background(Color.clear)
-            .navigationTitle("My Systems")
-            // map path entries to destination views
-            .navigationDestination(for: ActiveQuestSystem.self) { system in
-                QuestQueueView(activeSystem: system)
-            }
-            .onAppear { path = [] }
-            .alert(isPresented: Binding<Bool>(
-                get: { vm.errorMessage != nil },
-                set: { _ in vm.errorMessage = nil }
-            )) {
-                Alert(
-                    title: Text("Error"),
-                    message: Text(vm.errorMessage ?? ""),
-                    dismissButton: .default(Text("OK"))
-                )
+                // Move Pause/Resume + Stop into one swipe gesture per row
+                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                    Button {
+                        activeSystemsVM.togglePause(system: system)
+                    } label: {
+                        Text(system.status == .active ? "Pause" : "Resume")
+                    }
+                    .tint(themeManager.theme.accentColor)
+
+                    Button(role: .destructive) {
+                        activeSystemsVM.stop(system: system)
+                    } label: {
+                        Text("Stop")
+                    }
+                }
+                .listRowBackground(Color.white.opacity(0.9))
+                .cornerRadius(themeManager.theme.cornerRadius)
             }
         }
-        .background(Color.clear) // ensure NavigationStack has no white background
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .background(Color.clear)
     }
 }
 

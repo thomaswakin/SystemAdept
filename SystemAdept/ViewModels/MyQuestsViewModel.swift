@@ -22,6 +22,8 @@ struct ActiveQuest: Identifiable {
 final class MyQuestsViewModel: ObservableObject {
     // MARK: Published
     @Published var activeQuests: [ActiveQuest] = []
+    @Published var didLoadInitial: Bool = false
+    private var hasLoadedInitial: Bool = false
     @Published var errorMessage: String?
 
     // MARK: Private
@@ -30,7 +32,7 @@ final class MyQuestsViewModel: ObservableObject {
     private var qpListeners: [String: ListenerRegistration] = [:]
     private var systemQuests: [String: [ActiveQuest]] = [:]
 
-    // *** New: keep decoded ActiveQuestSystems and timer ***
+    // Hold decoded systems + a timer for maintenance
     private var activeQuestSystems: [ActiveQuestSystem] = []
     private var maintenanceTimer: Timer?
 
@@ -62,31 +64,19 @@ final class MyQuestsViewModel: ObservableObject {
             }
             let docs = snap?.documents ?? []
 
-            // 1) Decode and store ActiveQuestSystem models manually
+            // Decode ActiveQuestSystem
             self.activeQuestSystems = docs.compactMap { doc in
                 let data = doc.data()
-                // Required Firestore reference to the QuestSystem
                 guard let questSystemRef = data["questSystemRef"] as? DocumentReference else {
                     return nil
                 }
-                // Optional system name override
                 let systemName = data["questSystemName"] as? String
                     ?? questSystemRef.documentID
-                // Optional user‑selected flag
                 let isUserSelected = data["isUserSelected"] as? Bool ?? false
-                // Assigned timestamp
-                let assignedAt: Date = {
-                    if let ts = data["assignedAt"] as? Timestamp {
-                        return ts.dateValue()
-                    }
-                    return Date()
-                }()
-                // Status enum
-                let status: SystemAssignmentStatus = {
-                    let raw = data["status"] as? String ?? SystemAssignmentStatus.active.rawValue
-                    return SystemAssignmentStatus(rawValue: raw) ?? .active
-                }()
-                // Optional current quest pointer
+                let assignedAt: Date = (data["assignedAt"] as? Timestamp)?.dateValue() ?? Date()
+                let rawStatus = data["status"] as? String
+                                ?? SystemAssignmentStatus.active.rawValue
+                let status = SystemAssignmentStatus(rawValue: rawStatus) ?? .active
                 let currentQuestRef = data["currentQuestRef"] as? DocumentReference
 
                 return ActiveQuestSystem(
@@ -100,7 +90,7 @@ final class MyQuestsViewModel: ObservableObject {
                 )
             }
 
-            // 2) Remove outdated listeners
+            // Remove outdated questProgress listeners
             let currentIds = Set(docs.map { $0.documentID })
             for removed in qpListeners.keys where !currentIds.contains(removed) {
                 qpListeners[removed]?.remove()
@@ -108,7 +98,7 @@ final class MyQuestsViewModel: ObservableObject {
                 systemQuests.removeValue(forKey: removed)
             }
 
-            // 3) Attach listeners for new systems
+            // Attach listeners for each new system
             for doc in docs {
                 let aqsId = doc.documentID
                 if qpListeners[aqsId] == nil {
@@ -116,15 +106,14 @@ final class MyQuestsViewModel: ObservableObject {
                     let systemName = data["questSystemName"] as? String
                         ?? (data["questSystemRef"] as? DocumentReference)?.documentID
                         ?? "Unknown"
-
                     listenQuestProgress(for: aqsId, systemName: systemName)
                 }
             }
 
-            // 4) Recompute UI list
-            self.recomputeActiveQuests()
+            // ─── **No longer** recompute here ───
+            // self.recomputeActiveQuests()
 
-            // 5) Run maintenance immediately for each system
+            // Run maintenance immediately for each system
             self.activeQuestSystems.forEach {
                 QuestQueueViewModel.runMaintenance(for: $0)
             }
@@ -134,7 +123,7 @@ final class MyQuestsViewModel: ObservableObject {
     // MARK: - QuestProgress Listeners
     private func listenQuestProgress(for aqsId: String, systemName: String) {
         guard let uid = Auth.auth().currentUser?.uid else { return }
-        print("MyQuestsVM: listenQuestProgress for \(aqsId) system \(systemName) run")
+        print("MyQuestsVM: listenQuestProgress for \(aqsId) system \(systemName)")
         let qpColl = db
             .collection("users").document(uid)
             .collection("activeQuestSystems").document(aqsId)
@@ -181,6 +170,7 @@ final class MyQuestsViewModel: ObservableObject {
 
                 group.notify(queue: .main) {
                     self.systemQuests[aqsId] = list
+                    // Recompute **after** we have real questProgress data
                     self.recomputeActiveQuests()
                 }
             }
@@ -190,11 +180,19 @@ final class MyQuestsViewModel: ObservableObject {
 
     // MARK: - Recompute UI State
     private func recomputeActiveQuests() {
-        print("MyQuestsVM:  recompute active quests run")
+        print("MyQuestsVM: recompute active quests run")
         let now = Date()
         let all = systemQuests.values.flatMap { $0 }
-        activeQuests = all.sorted {
-            ($0.progress.availableAt ?? now) < ($1.progress.availableAt ?? now)
+
+        // Flip didLoadInitial only on the first *real* recompute
+        if !hasLoadedInitial {
+            didLoadInitial  = true
+            hasLoadedInitial = true
+        }
+
+        // Sort with a single‐expression closure
+        activeQuests = all.sorted { a, b in
+            (a.progress.availableAt ?? now) < (b.progress.availableAt ?? now)
         }
     }
 
@@ -203,7 +201,6 @@ final class MyQuestsViewModel: ObservableObject {
         print("MyQuestsVM: startMaintenanceTimer run")
         maintenanceTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
             guard let self = self else { return }
-            // Run the same maintenance for each active system
             self.activeQuestSystems.forEach {
                 QuestQueueViewModel.runMaintenance(for: $0)
             }
@@ -211,16 +208,13 @@ final class MyQuestsViewModel: ObservableObject {
     }
 
     // MARK: - User Actions
-
-    /// Delegates to QuestQueueViewModel.complete(_:)
     func complete(_ aq: ActiveQuest) {
         print("MyQuestsVM: complete \(aq)")
         guard let system = activeQuestSystems.first(where: { $0.id == aq.aqsId }) else { return }
         QuestQueueViewModel.complete(aq, in: system)
-        self.recomputeActiveQuests()
+        recomputeActiveQuests()
     }
 
-    /// Delegates to QuestQueueViewModel.restart(_:)
     func restart(_ aq: ActiveQuest, completion: @escaping (Bool) -> Void) {
         print("MyQuestsVM: restart \(aq)")
         guard let system = activeQuestSystems.first(where: { $0.id == aq.aqsId }) else {
@@ -228,47 +222,47 @@ final class MyQuestsViewModel: ObservableObject {
         }
         QuestQueueViewModel.restart(aq, in: system)
         completion(true)
-        self.recomputeActiveQuests()
+        recomputeActiveQuests()
     }
-    
-    /// Returns the active quests, filtered by the UI’s `filter` value and sorted
-    /// by expiration or completion date, ascending/descending.
+
+    // MARK: - Filter & Sort
     func filteredAndSorted(
         filter: QuestFilter,
         ascending: Bool
     ) -> [ActiveQuest] {
-      let all = activeQuests
+        let all = activeQuests
 
-      // 1) filter
-      let filtered: [ActiveQuest] = {
-          switch filter {
-          case .all:
-              return all.filter { s in
-                  s.progress.status == .available ||
-                  s.progress.status == .failed
-              }
-          case .today:
-              return all.filter {
-                  let s = $0.progress.status
-                  return (s == .available || s == .failed)
-                  && filter.matches($0.progress.expirationTime)
-              }
-          case .complete:
-              return all.filter { $0.progress.status == .completed }
-          }
-      }()
+        // 1) filter
+        let filtered: [ActiveQuest]
+        switch filter {
+        case .today:
+            filtered = all.filter { quest in
+                let s = quest.progress.status
+                return (s == .available || s == .failed)
+                    && filter.matches(quest.progress.expirationTime)
+            }
 
-      // 2) sort
-      return filtered.sorted { a, b in
-        // pick the right date
-        let d1 = (filter == .complete
-                  ? (a.progress.completedAt ?? .distantPast)
-                  : (a.progress.expirationTime ?? .distantPast))
-        let d2 = (filter == .complete
-                  ? (b.progress.completedAt ?? .distantPast)
-                  : (b.progress.expirationTime ?? .distantPast))
-        return ascending ? (d1 < d2) : (d1 > d2)
-      }
+        case .all:
+            filtered = all.filter {
+                $0.progress.status == .available
+                || $0.progress.status == .failed
+            }
+
+        case .complete:
+            filtered = all.filter {
+                $0.progress.status == .completed
+            }
+        }
+
+        // 2) sort
+        return filtered.sorted { a, b in
+            let d1 = (filter == .complete
+                      ? (a.progress.completedAt ?? .distantPast)
+                      : (a.progress.expirationTime ?? .distantPast))
+            let d2 = (filter == .complete
+                      ? (b.progress.completedAt ?? .distantPast)
+                      : (b.progress.expirationTime ?? .distantPast))
+            return ascending ? (d1 < d2) : (d1 > d2)
+        }
     }
-    
 }

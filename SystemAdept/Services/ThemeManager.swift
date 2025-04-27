@@ -39,15 +39,15 @@ final class ThemeManager: ObservableObject {
                 bodyFontName:           "Futura-Medium",
                 cornerRadius:           8,
                 iconSetName:            "DefaultIcons",
-                backgroundImageName:    "background",
-                fontSizeVerySmall:      8,
-                fontSizeSmall:          12,
-                fontSizeMedium:         16,
-                fontSizeLarge:          24,
-                fontSizeXtraLarge:      32,
-                spacingSmall:           4,
-                spacingMedium:          8,
-                spacingLarge:           16
+                backgroundImageName:    "circuit",
+                fontSizeVerySmall:      11,
+                fontSizeSmall:          16,
+                fontSizeMedium:         20,
+                fontSizeLarge:          28,
+                fontSizeXtraLarge:      34,
+                spacingSmall:           6,
+                spacingMedium:          10,
+                spacingLarge:           18
             )
         }
 
@@ -105,35 +105,42 @@ final class ThemeManager: ObservableObject {
         UINavigationBar.appearance().compactAppearance     = appearance
     }
 
+    /// Applies the current theme to UITabBar.
     func applyTabBarAppearance() {
         let uiPrimary = UIColor(theme.primaryColor)
         let uiAccent  = UIColor(theme.accentColor)
-        let uiFont    = UIFont(
-            name: theme.bodyFontName,
-            size: theme.fontSizeSmall
-        ) ?? .systemFont(ofSize: theme.fontSizeSmall)
-
+        let uiFont    = UIFont(name: theme.bodyFontName, size: theme.fontSizeSmall)!
+        
         let appearance = UITabBarAppearance()
-        appearance.configureWithTransparentBackground()   // ← transparent instead of opaque
-
+        appearance.configureWithTransparentBackground()
+        appearance.backgroundColor   = .clear
+        appearance.backgroundImage   = UIImage()
+        appearance.shadowImage       = UIImage()
+        
         // Unselected
         appearance.stackedLayoutAppearance.normal.titleTextAttributes = [
-            .font:            uiFont,
+            .font: uiFont,
             .foregroundColor: uiPrimary
         ]
         appearance.stackedLayoutAppearance.normal.iconColor = uiPrimary
-
+        
         // Selected
         appearance.stackedLayoutAppearance.selected.titleTextAttributes = [
-            .font:            uiFont,
+            .font: uiFont,
             .foregroundColor: uiAccent
         ]
         appearance.stackedLayoutAppearance.selected.iconColor = uiAccent
-
+        
+        // Apply to standard & scrolling contexts
         UITabBar.appearance().standardAppearance = appearance
         if #available(iOS 15.0, *) {
             UITabBar.appearance().scrollEdgeAppearance = appearance
         }
+        
+        // Also ensure the bar’s own properties are clear
+        UITabBar.appearance().backgroundColor = .clear
+        UITabBar.appearance().backgroundImage = UIImage()
+        UITabBar.appearance().shadowImage     = UIImage()
     }
     
     func applySegmentedControlAppearance() {

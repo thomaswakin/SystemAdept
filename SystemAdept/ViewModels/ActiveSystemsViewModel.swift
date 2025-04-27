@@ -1,4 +1,3 @@
-//
 //  ActiveSystemsViewModel.swift
 //  SystemAdept
 //
@@ -12,32 +11,38 @@ import Combine
 
 /// Manages the list of quest systems the user has activated,
 /// and triggers automatic quest‑unlocking refresh for each.
+/// Also fetches the list of available systems for routing when no active.
 final class ActiveSystemsViewModel: ObservableObject {
     // MARK: - Published
     @Published var activeSystems: [ActiveQuestSystem] = []
+    @Published var availableSystems: [QuestSystem] = []      // newly added
+    @Published var didLoadActive: Bool = false
+    @Published var didLoadAvailable: Bool = false
     @Published var errorMessage: String?
+
+    private var hasLoadedActive = false
+    private var hasLoadedAvailable = false
 
     // MARK: - Private
     private let db = Firestore.firestore()
     private var listener: ListenerRegistration?
+    private var cancellables = Set<AnyCancellable>()
 
     /// Hold onto each QuestQueueViewModel so its periodicTimer isn't deallocated
     private var queueVMs: [String: QuestQueueViewModel] = [:]
     
     // MARK: - Init / Deinit
     init() {
-        startListening()
+        startListeningActive()
+        fetchAvailableSystems()
     }
 
     deinit {
         listener?.remove()
     }
     
-    
-
     // MARK: - Listen for Active Systems
-    private func startListening() {
-        print("ActiveSystemVM: starting activeSystems listener...")
+    private func startListeningActive() {
         guard let uid = Auth.auth().currentUser?.uid else { return }
         let coll = db
             .collection("users")
@@ -52,9 +57,6 @@ final class ActiveSystemsViewModel: ObservableObject {
             }
 
             let docs = snap?.documents ?? []
-            print("🔍 ActiveSystems listener fired. docs.count = \(docs.count)")
-
-            // Map Firestore documents into ActiveQuestSystem
             var newSystems: [ActiveQuestSystem] = []
             for doc in docs {
                 let data = doc.data()
@@ -63,10 +65,7 @@ final class ActiveSystemsViewModel: ObservableObject {
                     let statusStr = data["status"]           as? String,
                     let status    = SystemAssignmentStatus(rawValue: statusStr),
                     let ts        = data["assignedAt"]       as? Timestamp
-                else {
-                    print("⚠️ Missing fields in activeQuestSystems/\(doc.documentID)")
-                    continue
-                }
+                else { continue }
 
                 let name = data["questSystemName"] as? String ?? qsr.documentID
                 let isSelected: Bool = {
@@ -89,50 +88,65 @@ final class ActiveSystemsViewModel: ObservableObject {
                 )
             }
 
+            // Publish active systems
             self.activeSystems = newSystems
+            if !self.hasLoadedActive {
+                self.didLoadActive = true
+                self.hasLoadedActive = true
+            }
 
-            // ─── Trigger refresh/unlock for each active system ───
-            print("🛠️ ActiveSystemsViewModel: running quest‑refresh for each system")
+            // Trigger refresh/unlock for each active system
             for aqs in newSystems {
-                print("🔄 Refreshing quests for \(aqs.questSystemName) (aqsId=\(aqs.id))")
                 if let vm = self.queueVMs[aqs.id] {
-                    // already exists: just refresh
                     vm.refreshAvailableQuests()
                 } else {
-                    // create & store so its periodicTimer sticks around
                     let vm = QuestQueueViewModel(activeSystem: aqs)
                     self.queueVMs[aqs.id] = vm
                     vm.refreshAvailableQuests()
                 }
             }
-
-            // Remove any VMs for systems the user deactivated
-            let activeIds = Set(newSystems.map { $0.id })
-            let removedIds = queueVMs.keys.filter { !activeIds.contains($0) }
-            for id in removedIds {
-                queueVMs.removeValue(forKey: id)
-            }
+            // Clean up removed VMs
+            let activeIds = Set(newSystems.map(\.id))
+            self.queueVMs.keys.filter { !activeIds.contains($0) }
+                .forEach { self.queueVMs.removeValue(forKey: $0) }
         }
     }
+
+    // MARK: - Fetch Available Systems
+    private func fetchAvailableSystems() {
+        let coll = db.collection("questSystems")
+        coll.getDocuments(completion: { [weak self] (snapshot, error) in
+            guard let self = self else { return }
+            if let error = error {
+                self.errorMessage = error.localizedDescription
+                return
+            }
+            let docs = snapshot?.documents ?? []
+            // Use the failable initializer in QuestSystem
+            let systems = docs.compactMap { QuestSystem(from: $0) }
+            self.availableSystems = systems
+            if !self.hasLoadedAvailable {
+                self.didLoadAvailable = true
+                self.hasLoadedAvailable = true
+            }
+        })
+    }
+
 
     // MARK: - User Actions
     func togglePause(system: ActiveQuestSystem) {
         let queueVM = QuestQueueViewModel(activeSystem: system)
-        if system.status == .active {
-            queueVM.pauseSystem()
-        } else {
-            queueVM.resumeSystem()
-        }
+        system.status == .active
+            ? queueVM.pauseSystem()
+            : queueVM.resumeSystem()
     }
 
     func stop(system: ActiveQuestSystem) {
-        print("stop \(system.id)")
         updateStatus(aqsId: system.id, status: .stopped)
     }
 
     // MARK: - Helpers
     private func updateStatus(aqsId: String, status: SystemAssignmentStatus) {
-        print("ActiveSystemVM: updateStatus \(aqsId) \(status)")
         guard let uid = Auth.auth().currentUser?.uid else { return }
         let ref = db
             .collection("users")
@@ -147,3 +161,4 @@ final class ActiveSystemsViewModel: ObservableObject {
         }
     }
 }
+

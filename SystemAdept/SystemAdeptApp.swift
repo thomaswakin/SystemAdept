@@ -3,6 +3,7 @@
 //  SystemAdept
 //
 //  Created by Thomas Akin on 3/29/25.
+//
 
 import SwiftUI
 import FirebaseCore
@@ -10,42 +11,51 @@ import BackgroundTasks
 
 @main
 struct SystemAdeptApp: App {
-    // MARK: - State Objects
-    @StateObject private var authVM = AuthViewModel()
-    @StateObject private var activeSystemsVM = ActiveSystemsViewModel()
+    // MARK: - Uninitialized @StateObjects (we wire them up in init)
+    @StateObject private var activeSystemsVM: ActiveSystemsViewModel
+    @StateObject private var questsVM: MyQuestsViewModel
+    @StateObject private var appState: AppState
+
+    // Other state objects
+    @StateObject private var authVM       = AuthViewModel()
     @StateObject private var themeManager = ThemeManager()
-    @Environment(\ .scenePhase) private var scenePhase
 
     init() {
-        // Configure Firebase
+        // 1) Configure Firebase
         FirebaseApp.configure()
-        // Schedule any background tasks
-        BackgroundTaskManager.shared.scheduleAppRefresh()
-        // Apply initial bar styles
-        themeManager.applyNavigationBarAppearance()
-        themeManager.applyTabBarAppearance()
 
-        // Clear UITableView backgrounds for SwiftUI Lists
-        UITableView.appearance().backgroundColor = .clear
-        UITableViewCell.appearance().backgroundColor = .clear
+        // 2) Instantiate the two VMs that AppState requires
+        let asvm = ActiveSystemsViewModel()
+        let qvm  = MyQuestsViewModel()
+
+        // 3) Wire them into SwiftUI
+        _activeSystemsVM = StateObject(wrappedValue: asvm)
+        _questsVM       = StateObject(wrappedValue: qvm)
+
+        // 4) Initialize AppState with those dependencies
+        _appState = StateObject(wrappedValue: AppState(
+            activeSystemsVM: asvm,
+            questsVM: qvm
+        ))
     }
 
     var body: some Scene {
         WindowGroup {
-          ZStack {
-            themeManager.theme.backgroundImage
-              .ignoresSafeArea()
+            ZStack {
+                // Full-screen background image
+                themeManager.theme.backgroundImage
+                    .resizable()
+                    .scaledToFill()
+                    .ignoresSafeArea()
 
-            AuthView()
-            .environmentObject(authVM)
-            .environmentObject(themeManager)
-          }
-          .scrollContentBackground(.hidden)
-          .toolbarBackground(.hidden)
-          .background(Color.clear)            // make the nav container transparent
-          .ignoresSafeArea()
+                // **Correct root: MainTabView**
+                MainTabView()
+                    .environmentObject(authVM)
+                    .environmentObject(activeSystemsVM)
+                    .environmentObject(questsVM)
+                    .environmentObject(themeManager)
+                    .environmentObject(appState)
+            }
         }
     }
 }
-
-

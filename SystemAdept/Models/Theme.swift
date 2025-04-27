@@ -89,15 +89,19 @@ struct Theme: Decodable {
     }
 
     // MARK: - Font getters
-    var bodyVerySmallFont:  Font { .custom(bodyFontName, size: fontSizeVerySmall) }
-    var bodySmallFont:      Font { .custom(bodyFontName, size: fontSizeSmall) }
-    var bodyMediumFont:     Font { .custom(bodyFontName, size: fontSizeMedium) }
-    var bodyLargeFont:      Font { .custom(bodyFontName, size: fontSizeLarge) }
-    var headingVerySmallFont: Font { .custom(headingFontName, size: fontSizeVerySmall) }
-    var headingSmallFont:     Font { .custom(headingFontName, size: fontSizeSmall) }
-    var headingMediumFont:    Font { .custom(headingFontName, size: fontSizeMedium) }
-    var headingLargeFont:     Font { .custom(headingFontName, size: fontSizeLarge) }
-    var headingXtraLargeFont:     Font { .custom(headingFontName, size: fontSizeXtraLarge) }
+    // body variants
+    var bodyVerySmallFont:  Font { .custom(bodyFontName, size: fontSizeVerySmall, relativeTo: .caption2) }
+    var bodySmallFont:      Font { .custom(bodyFontName, size: fontSizeSmall,     relativeTo: .footnote) }
+    var bodyMediumFont:     Font { .custom(bodyFontName, size: fontSizeMedium,    relativeTo: .body) }
+    var bodyLargeFont:      Font { .custom(bodyFontName, size: fontSizeLarge,     relativeTo: .title3) }
+    var bodyXtraLargeFont:      Font { .custom(bodyFontName, size: fontSizeXtraLarge,     relativeTo: .title2) }
+
+    // heading variants
+    var headingVerySmallFont: Font { .custom(headingFontName, size: fontSizeVerySmall, relativeTo: .caption) }
+    var headingSmallFont:     Font { .custom(headingFontName, size: fontSizeSmall,     relativeTo: .callout) }
+    var headingMediumFont:    Font { .custom(headingFontName, size: fontSizeMedium,    relativeTo: .headline) }
+    var headingLargeFont:     Font { .custom(headingFontName, size: fontSizeLarge,     relativeTo: .largeTitle) }
+    var headingXtraLargeFont:     Font { .custom(headingFontName, size: fontSizeXtraLarge, relativeTo: .title2) }
 
     // MARK: - Padding shortcuts
     var paddingSmall:  CGFloat { spacingSmall }

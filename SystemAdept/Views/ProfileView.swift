@@ -10,13 +10,17 @@ import SwiftUI
 struct ProfileView: View {
     @EnvironmentObject var authVM: AuthViewModel
     @EnvironmentObject private var themeManager: ThemeManager
+    
+    // ← New state for showing sign‐out errors
+    @State private var showSignOutError = false
+    @State private var signOutErrorMessage = ""
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: true) {
             if let user = authVM.userProfile {
                 VStack(spacing: themeManager.theme.spacingMedium) {
                     // Header: Name & Email
-                    VStack(alignment: .leading, spacing: themeManager.theme.spacingSmall) {
+                    HStack( spacing: themeManager.theme.spacingLarge) {
                         Text(user.name)
                             .font(themeManager.theme.headingMediumFont)
                             .bold()
@@ -25,8 +29,11 @@ struct ProfileView: View {
                             .font(themeManager.theme.bodySmallFont)
                             .foregroundColor(themeManager.theme.secondaryTextColor)
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(maxWidth: .infinity, minHeight: 80)
+                    .background(themeManager.theme.overlayBackground)
+                    .cornerRadius(themeManager.theme.cornerRadius)
                     .padding(.horizontal, themeManager.theme.paddingMedium)
+
 
                     // Aura stat
                     StatCard(title: "Aura", value: display(user.aura))
@@ -43,16 +50,19 @@ struct ProfileView: View {
                             user.restEndHour,   user.restEndMinute
                         ))
                         .font(themeManager.theme.bodySmallFont)
-                        .foregroundColor(themeManager.theme.secondaryTextColor)
+                        .foregroundColor(themeManager.theme.primaryTextColor)
 
                         NavigationLink {
                             RestCycleSettingsView()
                         } label: {
                             Text("Edit Rest Cycle")
                                 .font(themeManager.theme.bodySmallFont)
-                                .foregroundColor(themeManager.theme.accentPrimary)
+                                .foregroundColor(themeManager.theme.secondaryTextColor)
                         }
                     }
+                    .frame(maxWidth: .infinity, minHeight: 80)
+                    .background(themeManager.theme.overlayBackground)
+                    .cornerRadius(themeManager.theme.cornerRadius)
                     .padding(.horizontal, themeManager.theme.paddingMedium)
                 }
                 .padding(.vertical, themeManager.theme.spacingMedium)
@@ -90,12 +100,12 @@ struct StatCard: View {
     var body: some View {
         VStack(spacing: themeManager.theme.spacingSmall) {
             Text(title)
-                .font(themeManager.theme.bodySmallFont)
-                .foregroundColor(themeManager.theme.secondaryTextColor)
+                .font(themeManager.theme.headingLargeFont)
+                .foregroundColor(themeManager.theme.primaryTextColor)
             Text(value)
                 .font(themeManager.theme.bodyLargeFont)
                 .bold()
-                .foregroundColor(themeManager.theme.primaryTextColor)
+                .foregroundColor(themeManager.theme.accentPrimary)
         }
         .frame(maxWidth: .infinity, minHeight: 80)
         .padding(themeManager.theme.paddingMedium)

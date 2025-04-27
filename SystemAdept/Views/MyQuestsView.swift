@@ -10,52 +10,126 @@ import SwiftUI
 struct MyQuestsView: View {
     @StateObject private var vm = MyQuestsViewModel()
     @EnvironmentObject private var themeManager: ThemeManager
-    @State private var filter: QuestFilter = .all
+
+    // Pager state
+    @State private var selectedPage: Page
     @State private var ascending = true
-    @State private var showDebuffMessage = false
     @State private var now = Date()
-
-    // MARK: – Computed Subviews
-
-    private var filterBar: some View {
-        HStack {
-            ForEach(QuestFilter.allCases) { f in
-                Button { filter = f } label: {
-                    Text(f.rawValue)
-                        .font(themeManager.theme.bodySmallFont)
-                        .fontWeight(filter == f ? .bold : .regular)
-                        .foregroundColor(filter == f
-                            ? themeManager.theme.accentColor
-                            : themeManager.theme.primaryColor)
-                }
-                .buttonStyle(.plain)
-                if f != QuestFilter.allCases.last { Spacer() }
-            }
-            Spacer()
-            Button { ascending.toggle() } label: {
-                Image(systemName: "arrow.up.arrow.down")
-                    .font(themeManager.theme.bodySmallFont)
-                    .rotationEffect(.degrees(ascending ? 0 : 180))
-                    .foregroundColor(themeManager.theme.secondaryColor)
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(.horizontal, themeManager.theme.paddingMedium)
-        .padding(.top, themeManager.theme.paddingMedium)
+    @State private var showDebuffMessage = false
+    
+    
+    init(initialPage: Page = .daily) {
+        _selectedPage = State(initialValue: initialPage)
     }
 
-    private var questList: some View {
+    // Define your four pages
+    enum Page: Int, CaseIterable {
+        case daily, expired, active, complete
+        var title: String {
+            switch self {
+            case .daily:    return "Daily Quests"
+            case .expired:  return "Expired Quests"
+            case .active:   return "All Active Quests"
+            case .complete: return "Completed Quests"
+            }
+        }
+    }
+
+    var body: some View {
+        VStack(spacing: themeManager.theme.spacingMedium) {
+            // 1) Only the current page’s big title
+            Text(selectedPage.title)
+                .font(themeManager.theme.headingLargeFont)
+                .foregroundColor(themeManager.theme.primaryColor)
+
+            // 2) Sort toggle
+            HStack {
+                Spacer()
+                Button {
+                    ascending.toggle()
+                } label: {
+                    Image(systemName: "arrow.up.arrow.down")
+                        .font(themeManager.theme.bodySmallFont)
+                        .rotationEffect(.degrees(ascending ? 0 : 180))
+                        .foregroundColor(themeManager.theme.secondaryColor)
+                }
+            }
+            .padding(.horizontal, themeManager.theme.paddingMedium)
+
+            // 3) Paged TabView with dots
+            TabView(selection: $selectedPage) {
+                ForEach(Page.allCases, id: \.self) { page in
+                    QuestList(page: page,
+                              quests: quests(for: page),
+                              now: now,
+                              ascending: ascending,
+                              vm: vm,
+                              showDebuffMessage: $showDebuffMessage)
+                    .tag(page)
+                }
+            }
+            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .always))
+            .indexViewStyle(PageIndexViewStyle(backgroundDisplayMode: .always))
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            // 4) Debuff toast
+            if showDebuffMessage {
+                Text("Reinitiating Quest. Penalty Debuff Applied")
+                    .font(themeManager.theme.bodyMediumFont)
+                    .padding(.vertical, themeManager.theme.spacingMedium)
+                    .padding(.horizontal, themeManager.theme.spacingLarge)
+                    .background(Color(.systemBackground).opacity(0.9))
+                    .cornerRadius(themeManager.theme.cornerRadius)
+                    .shadow(radius: 4)
+                    .transition(.opacity)
+                    .zIndex(1)
+            }
+        }
+        .padding()
+        // Drive the live clock
+        .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { time in
+            now = time
+        }
+    }
+
+    /// Helpers
+    private func quests(for page: Page) -> [ActiveQuest] {
+        let all = vm.activeQuests
+        let todayInterval = Calendar.current.dateInterval(of: .day, for: now)!
+        switch page {
+        case .daily:
+            return all.filter {
+                $0.progress.status == .available
+                  && todayInterval.contains($0.progress.expirationTime ?? .distantPast)
+            }
+        case .expired:
+            return all.filter { $0.progress.status == .failed }
+        case .active:
+            return all.filter { $0.progress.status == .available }
+        case .complete:
+            return all.filter { $0.progress.status == .completed }
+        }
+    }
+}
+
+private struct QuestList: View {
+    let page: MyQuestsView.Page
+    let quests: [ActiveQuest]
+    let now: Date
+    let ascending: Bool
+    let vm: MyQuestsViewModel
+    @Binding var showDebuffMessage: Bool
+
+    @EnvironmentObject private var themeManager: ThemeManager
+
+    var body: some View {
         List {
-            if let err = vm.errorMessage {
-                Text("Error: \(err)")
-                    .font(themeManager.theme.bodySmallFont)
-                    .foregroundColor(.red)
-            } else if vm.filteredAndSorted(filter: filter, ascending: ascending).isEmpty {
+            if quests.isEmpty {
                 Text(emptyMessage)
                     .font(themeManager.theme.bodySmallFont)
                     .foregroundColor(themeManager.theme.secondaryColor)
             } else {
-                ForEach(vm.filteredAndSorted(filter: filter, ascending: ascending)) { aq in
+                ForEach(sorted(quests)) { aq in
                     QuestRowView(
                         aq: aq,
                         now: now,
@@ -70,51 +144,18 @@ struct MyQuestsView: View {
         .background(Color.clear)
     }
 
-    @ViewBuilder
-    private var overlayMessage: some View {
-        if showDebuffMessage {
-            Text("Reinitiating Quest. Penalty Debuff Applied")
-                .font(themeManager.theme.bodyMediumFont)
-                // add more breathing room inside the bubble…
-                .padding(.vertical, themeManager.theme.paddingMedium)
-                .padding(.horizontal, themeManager.theme.paddingLarge)
-                .background(Color(.systemBackground).opacity(0.9))
-                .cornerRadius(themeManager.theme.cornerRadius)
-                .shadow(radius: 4)
-                // and a little padding from the screen edges
-                .padding(themeManager.theme.paddingMedium)
-                .transition(.opacity)
-                .zIndex(1)
-        }
-    }
-
     private var emptyMessage: String {
-        switch filter {
-        case .complete:
-            return "No completed quests yet."
-        default:
-            return "No quests match “\(filter.rawValue)”"
+        switch page {
+        case .complete: return "No completed quests yet."
+        default:         return "No quests here."
         }
     }
 
-    var body: some View {
-        ZStack {
-            VStack() {
-                filterBar
-                questList
-            }
-            overlayMessage
-        }
-        .navigationTitle("Active Quests")
-        .font(themeManager.theme.headingLargeFont)
-        .foregroundColor(themeManager.theme.primaryColor)
-        .padding()
-        .onReceive(
-            Timer.publish(every: 1, on: .main, in: .common).autoconnect()
-        ) { time in
-            now = time
+    private func sorted(_ list: [ActiveQuest]) -> [ActiveQuest] {
+        list.sorted {
+            let d1 = $0.progress.expirationTime ?? .distantPast
+            let d2 = $1.progress.expirationTime ?? .distantPast
+            return ascending ? d1 < d2 : d1 > d2
         }
     }
 }
-
-
