@@ -33,7 +33,7 @@ final class AuthViewModel: ObservableObject {
     }
 
     private func attachUserListener(for uid: String?) {
-        print("AuthVM: attaaching user listener for \(uid ?? "nil")")
+        print("AuthVM: attaching user listener for \(uid ?? "nil")")
         userListener?.remove()
         guard let uid = uid else {
             self.userProfile = nil

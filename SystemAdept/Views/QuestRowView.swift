@@ -22,7 +22,7 @@ struct QuestRowView: View {
 
     var body: some View {
         ZStack {
-            VStack(alignment: .leading) {
+            VStack(alignment: .leading, spacing: themeManager.theme.spacingSmall) {
                 HStack {
                     Text(aq.quest.questName)
                         .font(themeManager.theme.headingMediumFont)
@@ -54,8 +54,8 @@ struct QuestRowView: View {
                                 completeAura = aura
                                 showCompleteMessage = true
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                                        showCompleteMessage = false
-                                        vm.complete(aq)
+                                    showCompleteMessage = false
+                                    vm.complete(aq)
                                 }
                             }
                             .font(themeManager.theme.bodySmallFont)
@@ -83,6 +83,13 @@ struct QuestRowView: View {
                     }
                 }
 
+                // Move Debuffs count immediately below buttons
+                if aq.progress.failedCount > 0 {
+                    Text("Debuffs: \(aq.progress.failedCount)")
+                        .font(themeManager.theme.bodySmallFont)
+                        .foregroundColor(.red)
+                }
+
                 Text("System: \(aq.systemName)")
                     .font(themeManager.theme.bodySmallFont)
                     .foregroundColor(themeManager.theme.secondaryColor)
@@ -97,13 +104,6 @@ struct QuestRowView: View {
                     Text("Completed on \(comp.formatted(date: .abbreviated, time: .shortened))")
                         .font(themeManager.theme.bodySmallFont)
                         .foregroundColor(themeManager.theme.secondaryColor)
-                        .padding(.top, themeManager.theme.spacingSmall / 2)
-                }
-
-                if aq.progress.failedCount > 0 {
-                    Text("Debuffs: \(aq.progress.failedCount)")
-                        .font(themeManager.theme.bodySmallFont)
-                        .foregroundColor(.red)
                         .padding(.top, themeManager.theme.spacingSmall / 2)
                 }
             }

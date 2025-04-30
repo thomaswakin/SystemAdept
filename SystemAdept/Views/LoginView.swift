@@ -68,11 +68,6 @@ struct LoginView: View {
                     .padding(.vertical, themeManager.theme.spacingSmall)
                     .frame(maxWidth: .infinity)
 
-                    // Navigation on success
-                    NavigationLink(destination: MainTabView(), isActive: $isLoggedIn) {
-                        EmptyView()
-                    }
-
                     Spacer()
                 }
                 .padding(.horizontal, themeManager.theme.spacingMedium)

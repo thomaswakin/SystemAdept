@@ -10,8 +10,8 @@ import SwiftUI
 struct ProfileView: View {
     @EnvironmentObject var authVM: AuthViewModel
     @EnvironmentObject private var themeManager: ThemeManager
-    
-    // ← New state for showing sign‐out errors
+
+    // State for sign-out errors
     @State private var showSignOutError = false
     @State private var signOutErrorMessage = ""
 
@@ -20,7 +20,7 @@ struct ProfileView: View {
             if let user = authVM.userProfile {
                 VStack(spacing: themeManager.theme.spacingMedium) {
                     // Header: Name & Email
-                    HStack( spacing: themeManager.theme.spacingLarge) {
+                    HStack(spacing: themeManager.theme.spacingLarge) {
                         Text(user.name)
                             .font(themeManager.theme.headingMediumFont)
                             .bold()
@@ -33,7 +33,6 @@ struct ProfileView: View {
                     .background(themeManager.theme.overlayBackground)
                     .cornerRadius(themeManager.theme.cornerRadius)
                     .padding(.horizontal, themeManager.theme.paddingMedium)
-
 
                     // Aura stat
                     StatCard(title: "Aura", value: display(user.aura))
@@ -64,6 +63,26 @@ struct ProfileView: View {
                     .background(themeManager.theme.overlayBackground)
                     .cornerRadius(themeManager.theme.cornerRadius)
                     .padding(.horizontal, themeManager.theme.paddingMedium)
+
+                    // Logout Button
+                    Button(action: {
+                        do {
+                            try authVM.signOut()
+                        } catch {
+                            signOutErrorMessage = error.localizedDescription
+                            showSignOutError = true
+                        }
+                    }) {
+                        Text("Logout")
+                            .font(themeManager.theme.bodyMediumFont)
+                            .foregroundColor(themeManager.theme.overlayBackground)
+                            .frame(maxWidth: .infinity)
+                            .padding(themeManager.theme.spacingMedium)
+                            .background(themeManager.theme.secondaryTextColor)
+                            .cornerRadius(themeManager.theme.cornerRadius)
+                    }
+                    .padding(.horizontal, themeManager.theme.paddingMedium)
+                    .padding(.top, themeManager.theme.spacingMedium)
                 }
                 .padding(.vertical, themeManager.theme.spacingMedium)
             } else {
@@ -78,6 +97,14 @@ struct ProfileView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .padding(themeManager.theme.paddingMedium)
             }
+        }
+        // Sign-out error alert
+        .alert(isPresented: $showSignOutError) {
+            Alert(
+                title: Text("Logout Failed"),
+                message: Text(signOutErrorMessage),
+                dismissButton: .default(Text("OK"))
+            )
         }
         // Apply global theme
         .accentColor(themeManager.theme.accentPrimary)
@@ -146,6 +173,3 @@ struct ProfileView_Previews: PreviewProvider {
             .background(Color.clear)
     }
 }
-
-
-

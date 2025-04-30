@@ -16,13 +16,11 @@ struct MyQuestsView: View {
     @State private var ascending = true
     @State private var now = Date()
     @State private var showDebuffMessage = false
-    
-    
+
     init(initialPage: Page = .daily) {
         _selectedPage = State(initialValue: initialPage)
     }
 
-    // Define your four pages
     enum Page: Int, CaseIterable {
         case daily, expired, active, complete
         var title: String {
@@ -37,17 +35,19 @@ struct MyQuestsView: View {
 
     var body: some View {
         VStack(spacing: themeManager.theme.spacingMedium) {
-            // 1) Only the current page’s big title
+            // Page title
             Text(selectedPage.title)
                 .font(themeManager.theme.headingLargeFont)
                 .foregroundColor(themeManager.theme.primaryColor)
+                .frame(maxWidth: .infinity, minHeight: 30)
+                .background(themeManager.theme.overlayBackground)
+                .cornerRadius(themeManager.theme.cornerRadius)
+                .padding(.horizontal, themeManager.theme.paddingMedium)
 
-            // 2) Sort toggle
+            // Sort toggle
             HStack {
                 Spacer()
-                Button {
-                    ascending.toggle()
-                } label: {
+                Button { ascending.toggle() } label: {
                     Image(systemName: "arrow.up.arrow.down")
                         .font(themeManager.theme.bodySmallFont)
                         .rotationEffect(.degrees(ascending ? 0 : 180))
@@ -56,15 +56,18 @@ struct MyQuestsView: View {
             }
             .padding(.horizontal, themeManager.theme.paddingMedium)
 
-            // 3) Paged TabView with dots
+            // Paged TabView
             TabView(selection: $selectedPage) {
                 ForEach(Page.allCases, id: \.self) { page in
-                    QuestList(page: page,
-                              quests: quests(for: page),
-                              now: now,
-                              ascending: ascending,
-                              vm: vm,
-                              showDebuffMessage: $showDebuffMessage)
+                    QuestList(
+                        page: page,
+                        quests: quests(for: page),
+                        now: now,
+                        ascending: ascending,
+                        vm: vm,
+                        showDebuffMessage: $showDebuffMessage,
+                        selectedPage: $selectedPage
+                    )
                     .tag(page)
                 }
             }
@@ -72,7 +75,7 @@ struct MyQuestsView: View {
             .indexViewStyle(PageIndexViewStyle(backgroundDisplayMode: .always))
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            // 4) Debuff toast
+            // Debuff toast
             if showDebuffMessage {
                 Text("Reinitiating Quest. Penalty Debuff Applied")
                     .font(themeManager.theme.bodyMediumFont)
@@ -86,13 +89,11 @@ struct MyQuestsView: View {
             }
         }
         .padding()
-        // Drive the live clock
         .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { time in
             now = time
         }
     }
 
-    /// Helpers
     private func quests(for page: Page) -> [ActiveQuest] {
         let all = vm.activeQuests
         let todayInterval = Calendar.current.dateInterval(of: .day, for: now)!
@@ -100,7 +101,7 @@ struct MyQuestsView: View {
         case .daily:
             return all.filter {
                 $0.progress.status == .available
-                  && todayInterval.contains($0.progress.expirationTime ?? .distantPast)
+                && todayInterval.contains($0.progress.expirationTime ?? .distantPast)
             }
         case .expired:
             return all.filter { $0.progress.status == .failed }
@@ -119,15 +120,33 @@ private struct QuestList: View {
     let ascending: Bool
     let vm: MyQuestsViewModel
     @Binding var showDebuffMessage: Bool
+    @Binding var selectedPage: MyQuestsView.Page
 
     @EnvironmentObject private var themeManager: ThemeManager
 
     var body: some View {
         List {
             if quests.isEmpty {
-                Text(emptyMessage)
-                    .font(themeManager.theme.bodySmallFont)
-                    .foregroundColor(themeManager.theme.secondaryColor)
+                // Compute failed count
+                let failedCount = vm.activeQuests.filter { $0.progress.status == .failed }.count
+
+                // Show tappable restart message only for Daily & All Active
+                if (page == .daily || page == .active) && failedCount > 0 {
+                    Button(action: { selectedPage = .expired }) {
+                        Text("\(failedCount) quests awaiting restart")
+                            .font(themeManager.theme.bodySmallFont)
+                            .italic()
+                            .foregroundColor(.red)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                    }
+                } else {
+                    // Fallback empty message
+                    Text(emptyStateMessage)
+                        .font(themeManager.theme.bodySmallFont)
+                        .italic()
+                        .foregroundColor(.red)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                }
             } else {
                 ForEach(sorted(quests)) { aq in
                     QuestRowView(
@@ -144,10 +163,10 @@ private struct QuestList: View {
         .background(Color.clear)
     }
 
-    private var emptyMessage: String {
+    private var emptyStateMessage: String {
         switch page {
-        case .complete: return "No completed quests yet."
-        default:         return "No quests here."
+        case .complete: return "No quests completed"
+        default: return "Waiting on quests"
         }
     }
 
@@ -159,3 +178,4 @@ private struct QuestList: View {
         }
     }
 }
+
