@@ -1,36 +1,56 @@
 //
-//  SystemAdeptApp.swift
-//  SystemAdept
+// SystemAdeptApp.swift
+// SystemAdept
 //
-//  Created by Thomas Akin on 3/29/25.
+// Created by Thomas Akin on 3/29/25.
 //
 
 import SwiftUI
 import FirebaseCore
 import BackgroundTasks
+import UserNotifications
 
 @main
 struct SystemAdeptApp: App {
-    // MARK: - Uninitialized @StateObjects
+    // MARK: - StateObjects
     @StateObject private var activeSystemsVM: ActiveSystemsViewModel
     @StateObject private var questsVM: MyQuestsViewModel
     @StateObject private var appState: AppState
 
-    // Other state objects
-    @StateObject private var authVM       = AuthViewModel()
+    @StateObject private var authVM: AuthViewModel
     @StateObject private var themeManager = ThemeManager()
 
     init() {
         FirebaseApp.configure()
 
+        // 1) Instantiate all view‐models (including auth)
+        let auth = AuthViewModel()
         let asvm = ActiveSystemsViewModel()
         let qvm  = MyQuestsViewModel()
-        _activeSystemsVM = StateObject(wrappedValue: asvm)
-        _questsVM       = StateObject(wrappedValue: qvm)
-        _appState       = StateObject(wrappedValue: AppState(
+
+        // 2) Initialize the @StateObject wrappers
+        _authVM           = StateObject(wrappedValue: auth)
+        _activeSystemsVM  = StateObject(wrappedValue: asvm)
+        _questsVM         = StateObject(wrappedValue: qvm)
+
+        // 3) Build AppState now that authVM, systemsVM, and questsVM exist
+        let state = AppState(
             activeSystemsVM: asvm,
-            questsVM: qvm
-        ))
+            questsVM:        qvm,
+            authVM:          auth
+        )
+        _appState = StateObject(wrappedValue: state)
+
+        // 4) Request notification permission and wire the delegate
+        UNUserNotificationCenter.current().requestAuthorization(
+            options: [.alert, .badge, .sound]
+        ) { granted, error in
+            if let error = error {
+                print("🔔 Notification auth error:", error)
+            }
+        }
+        UNUserNotificationCenter.current().delegate = NotificationDelegate.shared
+        NotificationDelegate.shared.appState = state
     }
 
     var body: some Scene {
@@ -41,14 +61,11 @@ struct SystemAdeptApp: App {
                     .scaledToFill()
                     .ignoresSafeArea()
 
-                // ← Here’s the switch:
                 if authVM.userProfile == nil {
-                    // Not logged in → show Auth flow
                     AuthView()
                         .environmentObject(authVM)
                         .environmentObject(themeManager)
                 } else {
-                    // Logged in → show main UI
                     MainTabView()
                         .environmentObject(authVM)
                         .environmentObject(activeSystemsVM)

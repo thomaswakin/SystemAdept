@@ -1,157 +1,142 @@
+// AppState.swift
+// SystemAdept
 //
-//  AppState.swift
-//  SystemAdept
-//
-//  Created by Your Name on 4/27/25.
+// Created by Your Name on 4/27/25.
 //
 
 import SwiftUI
 import Combine
 
+/// Central app state and routing, now with notification scheduling.
 final class AppState: ObservableObject {
-    enum Tab: Hashable { case player, systems, quests }
+    enum Tab: Int, Hashable, CaseIterable {
+        case player = 0, systems = 1, quests = 2
+    }
 
-    // MARK: – Published for UI
+    // MARK: Published for UI
     @Published var selectedTab: Tab?
     @Published var initialQuestPage: MyQuestsView.Page?
     @Published var notificationMessage: String? = nil
     @Published var hasRouted: Bool = false
 
+    // MARK: Dependencies
+    private let activeSystemsVM: ActiveSystemsViewModel
+    private let questsVM: MyQuestsViewModel
+    private let authVM: AuthViewModel
+
     private var cancellables = Set<AnyCancellable>()
 
-    /// Inject your two VMs here.
+    /// Initialize with view-models and auth for scheduling notifications.
     init(
         activeSystemsVM: ActiveSystemsViewModel,
-        questsVM: MyQuestsViewModel
+        questsVM: MyQuestsViewModel,
+        authVM: AuthViewModel
     ) {
-        // 1) Watch for the first ActiveSystems snapshot (didLoadActive)
-        activeSystemsVM.$didLoadActive
-            .filter { $0 }       // only once, when systems arrive
-            .prefix(1)
+        self.activeSystemsVM = activeSystemsVM
+        self.questsVM = questsVM
+        self.authVM = authVM
+
+        // Combine systems & quests streams for routing
+        let combined = activeSystemsVM.$activeSystems
+            .combineLatest(questsVM.$activeQuests)
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
+            .share()
+
+        // 1) One-time startup routing when both data arrive
+        combined
+            .filter { systems, quests in !systems.isEmpty && !quests.isEmpty }
+            .prefix(1)
+            .sink { [weak self] systems, quests in
                 guard let self = self else { return }
-                let systems = activeSystemsVM.activeSystems
-
-                if systems.isEmpty {
-                    // ――― No active systems ―――
-                    self.selectedTab      = .systems
-                    self.initialQuestPage = .daily
-                    self.hasRouted        = true
-
-                } else {
-                    // ――― We have systems ――― wait for quests to load
-                    questsVM.$didLoadInitial
-                        .filter { $0 }   // once first quests arrive
-                        .prefix(1)
-                        .receive(on: DispatchQueue.main)
-                        .sink { [weak self] _ in
-                            guard let self = self else { return }
-                            self.route(
-                                systems: systems,
-                                quests: questsVM.activeQuests
-                            )
-                            self.hasRouted = true
-                        }
-                        .store(in: &self.cancellables)
-                }
+                self.route(systems: systems, quests: quests)
+                self.hasRouted = true
+                self.scheduleNotifications()
             }
             .store(in: &cancellables)
 
-        // 2) After startup, only update the banner (no re-routing)
-        Publishers.CombineLatest(
-            activeSystemsVM.$activeSystems,
-            questsVM.$activeQuests
+        // 2) After startup, update banner & per-quest expiry alerts
+        combined
+            .dropFirst()
+            .sink { [weak self] systems, quests in
+                guard let self = self else { return }
+                self.updateNotification(systems: systems, quests: quests)
+                NotificationManager.shared.scheduleExpiryAlerts(activeQuests: quests)
+            }
+            .store(in: &cancellables)
+        
+        // 3) Whenever the user’s profile, the active systems list, or the quest list updates,
+        //    re-run scheduleNotifications() to keep morning reminders accurate.
+        Publishers.Merge3(
+          authVM.$userProfile.compactMap { $0 }.map { _ in () },
+          activeSystemsVM.$activeSystems.map   { _ in () },
+          questsVM.$activeQuests.map          { _ in () }
         )
-        .dropFirst()  // ignore the very first emission
-        .receive(on: DispatchQueue.main)
-        .sink { [weak self] systems, quests in
-            self?.updateNotification(systems: systems, quests: quests)
+        .debounce(for: .seconds(1), scheduler: RunLoop.main)
+        .sink { [weak self] _ in
+          self?.scheduleNotifications()
         }
         .store(in: &cancellables)
+        
     }
 
-    // MARK: – One-time startup routing
-    private func route(
-        systems: [ActiveQuestSystem],
-        quests: [ActiveQuest]
-    ) {
+    // MARK: One-time routing logic
+    private func route(systems: [ActiveQuestSystem], quests: [ActiveQuest]) {
         notificationMessage = nil
         selectedTab = .quests
 
-        // Partition quests
         let available = quests.filter { $0.progress.status == .available }
         let failed    = quests.filter { $0.progress.status == .failed }
         let locked    = quests.filter { $0.progress.status == .locked }
 
-        // 1) Available quests?
         if !available.isEmpty {
-            // 1a) Any due today → Daily
+            // pick daily vs all-active
             let now = Date()
             let todaySpan = Calendar.current.dateInterval(of: .day, for: now)!
             if available.contains(where: {
-                if let exp = $0.progress.expirationTime {
-                    return todaySpan.contains(exp)
-                }
-                return false
+                guard let exp = $0.progress.expirationTime else { return false }
+                return todaySpan.contains(exp)
             }) {
                 initialQuestPage = .daily
             } else {
-                // 1b) Available but not due today → All Active
                 initialQuestPage = .active
             }
             return
         }
 
-        // 2) No available → Any failed? → Expired
         if !failed.isEmpty {
             initialQuestPage = .expired
             return
         }
 
-        // 3) No available or failed → Any locked?
         if !locked.isEmpty {
-            // Locked only: show waiting/countdown in banner (Daily page)
             initialQuestPage   = .daily
             notificationMessage = "Waiting on next quest"
             return
         }
 
-        // 4) No quests at all → fallback Daily
+        // fallback
         initialQuestPage = .daily
     }
 
-    // MARK: – Dynamic banner updates
-    private func updateNotification(
-        systems: [ActiveQuestSystem],
-        quests: [ActiveQuest]
-    ) {
-        // Only after routing
+    // MARK: Dynamic banner updates
+    private func updateNotification(systems: [ActiveQuestSystem], quests: [ActiveQuest]) {
         guard hasRouted, !systems.isEmpty else {
             notificationMessage = nil
             return
         }
-
-        // If any available or failed, clear banner
-        if quests.contains(where: {
-            [.available, .failed].contains($0.progress.status)
-        }) {
+        // clear if any available or failed
+        if quests.contains(where: { [.available, .failed].contains($0.progress.status) }) {
             notificationMessage = nil
             return
         }
-
-        // Only locked remain → countdown or waiting
-        let locked          = quests.filter { $0.progress.status == .locked }
-        let lockedWithDates = locked.compactMap { $0.progress.availableAt }
-
-        // If none have dates → waiting
-        if !locked.isEmpty && lockedWithDates.isEmpty {
+        // only locked remain
+        let locked = quests.filter { $0.progress.status == .locked }
+        let dates  = locked.compactMap { $0.progress.availableAt }
+        if !locked.isEmpty && dates.isEmpty {
             notificationMessage = "Waiting on next quest"
             return
         }
-
-        // Else some have future unlocks → countdown
-        if let next = lockedWithDates.min() {
+        if let next = dates.min() {
             let f = DateComponentsFormatter()
             f.allowedUnits = [.hour, .minute]
             f.unitsStyle   = .full
@@ -159,9 +144,23 @@ final class AppState: ObservableObject {
             notificationMessage = "Next Quest Available in \(delta)"
             return
         }
-
-        // Otherwise clear
         notificationMessage = nil
     }
-}
 
+    // MARK: Schedule morning + expiry notifications
+    private func scheduleNotifications() {
+        let profile = authVM.userProfile
+        let endHour   = profile?.restEndHour   ?? 6
+        let endMin    = profile?.restEndMinute ?? 0
+        let quests    = questsVM.activeQuests
+
+        NotificationManager.shared.scheduleNextMorningReminder(
+            restEndHour:   endHour,
+            restEndMinute: endMin,
+            activeQuests:  quests,
+            authVM:        authVM,
+            appState:      self
+        )
+        NotificationManager.shared.scheduleExpiryAlerts(activeQuests: quests)
+    }
+}
