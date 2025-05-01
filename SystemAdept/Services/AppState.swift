@@ -26,25 +26,40 @@ final class AppState: ObservableObject {
 
     private var cancellables = Set<AnyCancellable>()
 
-    /// Initialize with view-models and auth for scheduling notifications.
+    /// Initialize with view-models and auth for notifications.
     init(
         activeSystemsVM: ActiveSystemsViewModel,
         questsVM: MyQuestsViewModel,
         authVM: AuthViewModel
     ) {
         self.activeSystemsVM = activeSystemsVM
-        self.questsVM = questsVM
-        self.authVM = authVM
+        self.questsVM        = questsVM
+        self.authVM          = authVM
 
-        // Combine systems & quests streams for routing
+        // 1a) If there are no active systems at all → route immediately
+        activeSystemsVM.$activeSystems
+            .prefix(1)
+            .sink { [weak self] systems in
+                guard let self = self else { return }
+                if systems.isEmpty {
+                    self.selectedTab      = .systems
+                    self.initialQuestPage = .daily
+                    self.hasRouted        = true
+                    self.scheduleNotifications()
+                }
+            }
+            .store(in: &cancellables)
+
+        // 1b) If systems exist, wait for both systems & quests before routing
         let combined = activeSystemsVM.$activeSystems
             .combineLatest(questsVM.$activeQuests)
             .receive(on: DispatchQueue.main)
             .share()
 
-        // 1) One-time startup routing when both data arrive
         combined
-            .filter { systems, quests in !systems.isEmpty && !quests.isEmpty }
+            .filter { systems, quests in
+                !systems.isEmpty && !quests.isEmpty
+            }
             .prefix(1)
             .sink { [weak self] systems, quests in
                 guard let self = self else { return }
@@ -54,7 +69,7 @@ final class AppState: ObservableObject {
             }
             .store(in: &cancellables)
 
-        // 2) After startup, update banner & per-quest expiry alerts
+        // 2) After startup, update banner & expiry alerts whenever quests change
         combined
             .dropFirst()
             .sink { [weak self] systems, quests in
@@ -63,24 +78,21 @@ final class AppState: ObservableObject {
                 NotificationManager.shared.scheduleExpiryAlerts(activeQuests: quests)
             }
             .store(in: &cancellables)
-        
-        // 3) Whenever the user’s profile, the active systems list, or the quest list updates,
-        //    re-run scheduleNotifications() to keep morning reminders accurate.
-        Publishers.Merge3(
-          authVM.$userProfile.compactMap { $0 }.map { _ in () },
-          activeSystemsVM.$activeSystems.map   { _ in () },
-          questsVM.$activeQuests.map          { _ in () }
-        )
-        .debounce(for: .seconds(1), scheduler: RunLoop.main)
-        .sink { [weak self] _ in
-          self?.scheduleNotifications()
-        }
-        .store(in: &cancellables)
-        
+
+        // 3) Whenever userProfile changes (rest cycle edits), re-schedule morning reminder
+        authVM.$userProfile
+            .compactMap { $0 }
+            .sink { [weak self] _ in
+                self?.scheduleNotifications()
+            }
+            .store(in: &cancellables)
     }
 
     // MARK: One-time routing logic
-    private func route(systems: [ActiveQuestSystem], quests: [ActiveQuest]) {
+    private func route(
+        systems: [ActiveQuestSystem],
+        quests: [ActiveQuest]
+    ) {
         notificationMessage = nil
         selectedTab = .quests
 
@@ -89,7 +101,6 @@ final class AppState: ObservableObject {
         let locked    = quests.filter { $0.progress.status == .locked }
 
         if !available.isEmpty {
-            // pick daily vs all-active
             let now = Date()
             let todaySpan = Calendar.current.dateInterval(of: .day, for: now)!
             if available.contains(where: {
@@ -109,7 +120,7 @@ final class AppState: ObservableObject {
         }
 
         if !locked.isEmpty {
-            initialQuestPage   = .daily
+            initialQuestPage    = .daily
             notificationMessage = "Waiting on next quest"
             return
         }
@@ -119,19 +130,25 @@ final class AppState: ObservableObject {
     }
 
     // MARK: Dynamic banner updates
-    private func updateNotification(systems: [ActiveQuestSystem], quests: [ActiveQuest]) {
+    private func updateNotification(
+        systems: [ActiveQuestSystem],
+        quests: [ActiveQuest]
+    ) {
         guard hasRouted, !systems.isEmpty else {
             notificationMessage = nil
             return
         }
+
         // clear if any available or failed
         if quests.contains(where: { [.available, .failed].contains($0.progress.status) }) {
             notificationMessage = nil
             return
         }
-        // only locked remain
+
+        // locked-only → waiting or countdown
         let locked = quests.filter { $0.progress.status == .locked }
         let dates  = locked.compactMap { $0.progress.availableAt }
+
         if !locked.isEmpty && dates.isEmpty {
             notificationMessage = "Waiting on next quest"
             return
@@ -144,19 +161,20 @@ final class AppState: ObservableObject {
             notificationMessage = "Next Quest Available in \(delta)"
             return
         }
+
         notificationMessage = nil
     }
 
-    // MARK: Schedule morning + expiry notifications
+    // MARK: Notification scheduling helper
     private func scheduleNotifications() {
         let profile = authVM.userProfile
-        let endHour   = profile?.restEndHour   ?? 6
-        let endMin    = profile?.restEndMinute ?? 0
-        let quests    = questsVM.activeQuests
+        let restEndHour   = profile?.restEndHour   ?? 6
+        let restEndMinute = profile?.restEndMinute ?? 0
+        let quests        = questsVM.activeQuests
 
         NotificationManager.shared.scheduleNextMorningReminder(
-            restEndHour:   endHour,
-            restEndMinute: endMin,
+            restEndHour:   restEndHour,
+            restEndMinute: restEndMinute,
             activeQuests:  quests,
             authVM:        authVM,
             appState:      self

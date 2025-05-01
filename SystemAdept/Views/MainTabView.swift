@@ -10,6 +10,7 @@ import SwiftUI
 struct MainTabView: View {
     @EnvironmentObject private var themeManager: ThemeManager
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var authVM: AuthViewModel
 
     var body: some View {
         Group {
@@ -19,6 +20,14 @@ struct MainTabView: View {
                     Spacer()
                     ProgressView("Loading…")
                         .progressViewStyle(.circular)
+                    Button("Logout") {
+                        do {
+                            try authVM.signOut()
+                        } catch {
+                            // optionally handle/sign-out error here
+                        }
+                    }
+                    .padding(.top, 16)
                     Spacer()
                 }
             } else if
