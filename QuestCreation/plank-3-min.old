@@ -1,0 +1,299 @@
+id: plank-3-min
+shortName: Plank 3Min Prog
+description: Plank System
+defaultTimeToComplete:
+  amount: 1
+  unit: day
+defaultQuestCooldown:
+  amount: 0
+  unit: minute
+defaultRepeatDebuff: 0.5 
+quests:
+- questId: rank-1-s1
+  rank: 1
+  name: Plank 10 Seconds - Session 1
+  prompt: Hold a plank for 10 seconds to strengthen your core
+  isRequired: true
+  questAuraGranted: 1.0
+  questEventCount: 10.0
+  questEventUnits: seconds
+- questId: rank-1-s2
+  rank: 1
+  name: Plank 10 Seconds - Session 2
+  prompt: Maintain a plank for 10 seconds to build endurance
+  isRequired: true
+  questAuraGranted: 1.0
+  questEventCount: 10.0
+  questEventUnits: seconds
+- questId: rank-1-s3
+  rank: 1
+  name: Plank 10 Seconds - Session 3
+  prompt: Challenge your core by sustaining a plank for 10 seconds
+  isRequired: true
+  questAuraGranted: 1.0
+  questEventCount: 10.0
+  questEventUnits: seconds
+- questId: rank-2-s1
+  rank: 2
+  name: Plank 20 Seconds - Session 1
+  prompt: Hold a plank for 20 seconds to strengthen your core
+  isRequired: true
+  questAuraGranted: 1.4
+  questEventCount: 20.0
+  questEventUnits: seconds
+- questId: rank-2-s2
+  rank: 2
+  name: Plank 20 Seconds - Session 2
+  prompt: Maintain a plank for 20 seconds to build endurance
+  isRequired: true
+  questAuraGranted: 1.4
+  questEventCount: 20.0
+  questEventUnits: seconds
+- questId: rank-2-s3
+  rank: 2
+  name: Plank 20 Seconds - Session 3
+  prompt: Challenge your core by sustaining a plank for 20 seconds
+  isRequired: true
+  questAuraGranted: 1.4
+  questEventCount: 20.0
+  questEventUnits: seconds
+- questId: rank-3-s1
+  rank: 3
+  name: Plank 30 Seconds - Session 1
+  prompt: Hold a plank for 30 seconds to strengthen your core
+  isRequired: true
+  questAuraGranted: 2.6
+  questEventCount: 30.0
+  questEventUnits: seconds
+- questId: rank-3-s2
+  rank: 3
+  name: Plank 30 Seconds - Session 2
+  prompt: Maintain a plank for 30 seconds to build endurance
+  isRequired: true
+  questAuraGranted: 2.6
+  questEventCount: 30.0
+  questEventUnits: seconds
+- questId: rank-3-s3
+  rank: 3
+  name: Plank 30 Seconds - Session 3
+  prompt: Challenge your core by sustaining a plank for 30 seconds
+  isRequired: true
+  questAuraGranted: 2.6
+  questEventCount: 30.0
+  questEventUnits: seconds
+- questId: rank-4-s1
+  rank: 4
+  name: Plank 45 Seconds - Session 1
+  prompt: Hold a plank for 45 seconds to strengthen your core
+  isRequired: true
+  questAuraGranted: 4.6
+  questEventCount: 45.0
+  questEventUnits: seconds
+- questId: rank-4-s2
+  rank: 4
+  name: Plank 45 Seconds - Session 2
+  prompt: Maintain a plank for 45 seconds to build endurance
+  isRequired: true
+  questAuraGranted: 4.6
+  questEventCount: 45.0
+  questEventUnits: seconds
+- questId: rank-4-s3
+  rank: 4
+  name: Plank 45 Seconds - Session 3
+  prompt: Challenge your core by sustaining a plank for 45 seconds
+  isRequired: true
+  questAuraGranted: 4.6
+  questEventCount: 45.0
+  questEventUnits: seconds
+- questId: rank-5-s1
+  rank: 5
+  name: Plank 60 Seconds - Session 1
+  prompt: Hold a plank for 60 seconds to strengthen your core
+  isRequired: true
+  questAuraGranted: 7.5
+  questEventCount: 60.0
+  questEventUnits: seconds
+- questId: rank-5-s2
+  rank: 5
+  name: Plank 60 Seconds - Session 2
+  prompt: Maintain a plank for 60 seconds to build endurance
+  isRequired: true
+  questAuraGranted: 7.5
+  questEventCount: 60.0
+  questEventUnits: seconds
+- questId: rank-5-s3
+  rank: 5
+  name: Plank 60 Seconds - Session 3
+  prompt: Challenge your core by sustaining a plank for 60 seconds
+  isRequired: true
+  questAuraGranted: 7.5
+  questEventCount: 60.0
+  questEventUnits: seconds
+- questId: rank-6-s1
+  rank: 6
+  name: Plank 75 Seconds - Session 1
+  prompt: Hold a plank for 75 seconds to strengthen your core
+  isRequired: true
+  questAuraGranted: 11.1
+  questEventCount: 75.0
+  questEventUnits: seconds
+- questId: rank-6-s2
+  rank: 6
+  name: Plank 75 Seconds - Session 2
+  prompt: Maintain a plank for 75 seconds to build endurance
+  isRequired: true
+  questAuraGranted: 11.1
+  questEventCount: 75.0
+  questEventUnits: seconds
+- questId: rank-6-s3
+  rank: 6
+  name: Plank 75 Seconds - Session 3
+  prompt: Challenge your core by sustaining a plank for 75 seconds
+  isRequired: true
+  questAuraGranted: 11.1
+  questEventCount: 75.0
+  questEventUnits: seconds
+- questId: rank-7-s1
+  rank: 7
+  name: Plank 90 Seconds - Session 1
+  prompt: Hold a plank for 90 seconds to strengthen your core
+  isRequired: true
+  questAuraGranted: 15.6
+  questEventCount: 90.0
+  questEventUnits: seconds
+- questId: rank-7-s2
+  rank: 7
+  name: Plank 90 Seconds - Session 2
+  prompt: Maintain a plank for 90 seconds to build endurance
+  isRequired: true
+  questAuraGranted: 15.6
+  questEventCount: 90.0
+  questEventUnits: seconds
+- questId: rank-7-s3
+  rank: 7
+  name: Plank 90 Seconds - Session 3
+  prompt: Challenge your core by sustaining a plank for 90 seconds
+  isRequired: true
+  questAuraGranted: 15.6
+  questEventCount: 90.0
+  questEventUnits: seconds
+- questId: rank-8-s1
+  rank: 8
+  name: Plank 110 Seconds - Session 1
+  prompt: Hold a plank for 110 seconds to strengthen your core
+  isRequired: true
+  questAuraGranted: 20.8
+  questEventCount: 110.0
+  questEventUnits: seconds
+- questId: rank-8-s2
+  rank: 8
+  name: Plank 110 Seconds - Session 2
+  prompt: Maintain a plank for 110 seconds to build endurance
+  isRequired: true
+  questAuraGranted: 20.8
+  questEventCount: 110.0
+  questEventUnits: seconds
+- questId: rank-8-s3
+  rank: 8
+  name: Plank 110 Seconds - Session 3
+  prompt: Challenge your core by sustaining a plank for 110 seconds
+  isRequired: true
+  questAuraGranted: 20.8
+  questEventCount: 110.0
+  questEventUnits: seconds
+- questId: rank-9-s1
+  rank: 9
+  name: Plank 130 Seconds - Session 1
+  prompt: Hold a plank for 130 seconds to strengthen your core
+  isRequired: true
+  questAuraGranted: 26.9
+  questEventCount: 130.0
+  questEventUnits: seconds
+- questId: rank-9-s2
+  rank: 9
+  name: Plank 130 Seconds - Session 2
+  prompt: Maintain a plank for 130 seconds to build endurance
+  isRequired: true
+  questAuraGranted: 26.9
+  questEventCount: 130.0
+  questEventUnits: seconds
+- questId: rank-9-s3
+  rank: 9
+  name: Plank 130 Seconds - Session 3
+  prompt: Challenge your core by sustaining a plank for 130 seconds
+  isRequired: true
+  questAuraGranted: 26.9
+  questEventCount: 130.0
+  questEventUnits: seconds
+- questId: rank-10-s1
+  rank: 10
+  name: Plank 150 Seconds - Session 1
+  prompt: Hold a plank for 150 seconds to strengthen your core
+  isRequired: true
+  questAuraGranted: 33.8
+  questEventCount: 150.0
+  questEventUnits: seconds
+- questId: rank-10-s2
+  rank: 10
+  name: Plank 150 Seconds - Session 2
+  prompt: Maintain a plank for 150 seconds to build endurance
+  isRequired: true
+  questAuraGranted: 33.8
+  questEventCount: 150.0
+  questEventUnits: seconds
+- questId: rank-10-s3
+  rank: 10
+  name: Plank 150 Seconds - Session 3
+  prompt: Challenge your core by sustaining a plank for 150 seconds
+  isRequired: true
+  questAuraGranted: 33.8
+  questEventCount: 150.0
+  questEventUnits: seconds
+- questId: rank-11-s1
+  rank: 11
+  name: Plank 165 Seconds - Session 1
+  prompt: Hold a plank for 165 seconds to strengthen your core
+  isRequired: true
+  questAuraGranted: 41.5
+  questEventCount: 165.0
+  questEventUnits: seconds
+- questId: rank-11-s2
+  rank: 11
+  name: Plank 165 Seconds - Session 2
+  prompt: Maintain a plank for 165 seconds to build endurance
+  isRequired: true
+  questAuraGranted: 41.5
+  questEventCount: 165.0
+  questEventUnits: seconds
+- questId: rank-11-s3
+  rank: 11
+  name: Plank 165 Seconds - Session 3
+  prompt: Challenge your core by sustaining a plank for 165 seconds
+  isRequired: true
+  questAuraGranted: 41.5
+  questEventCount: 165.0
+  questEventUnits: seconds
+- questId: rank-12-s1
+  rank: 12
+  name: Plank 180 Seconds - Session 1
+  prompt: Hold a plank for 180 seconds to strengthen your core
+  isRequired: true
+  questAuraGranted: 50.0
+  questEventCount: 180.0
+  questEventUnits: seconds
+- questId: rank-12-s2
+  rank: 12
+  name: Plank 180 Seconds - Session 2
+  prompt: Maintain a plank for 180 seconds to build endurance
+  isRequired: true
+  questAuraGranted: 50.0
+  questEventCount: 180.0
+  questEventUnits: seconds
+- questId: rank-12-s3
+  rank: 12
+  name: Plank 180 Seconds - Session 3
+  prompt: Challenge your core by sustaining a plank for 180 seconds
+  isRequired: true
+  questAuraGranted: 50.0
+  questEventCount: 180.0
+  questEventUnits: seconds

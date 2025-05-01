@@ -27,11 +27,16 @@ struct Quest: Identifiable {
     /// Failable initializer from Firestore data dictionary.
     init?(from data: [String:Any], id: String) {
         self.id = id
-        guard let name = data["questName"] as? String else { return nil }
+        // Allow either old fields or plain Firestore keys
+        guard let name = (data["questName"] as? String) ?? (data["name"] as? String) else {
+            return nil
+        }
         self.questName = name
 
-        // questRank: Int, Double, or String
+        // questRank: Int, Double, or String, fallback to `rank`
         if let r = data["questRank"] as? Int {
+            questRank = r
+        } else if let r = data["rank"] as? Int {
             questRank = r
         } else if let d = data["questRank"] as? Double {
             questRank = Int(d)
@@ -41,10 +46,13 @@ struct Quest: Identifiable {
             questRank = 0
         }
 
-        guard let prompt = data["questPrompt"] as? String else { return nil }
+        // questPrompt or fallback to `prompt`
+        guard let prompt = (data["questPrompt"] as? String) ?? (data["prompt"] as? String) else {
+            return nil
+        }
         self.questPrompt = prompt
 
-        // questAuraGranted
+        // questAuraGranted: Double, Int, or String
         if let d = data["questAuraGranted"] as? Double {
             questAuraGranted = d
         } else if let i = data["questAuraGranted"] as? Int {
@@ -55,7 +63,7 @@ struct Quest: Identifiable {
             questAuraGranted = 0
         }
 
-        // questEventCount
+        // questEventCount: Double, Int, or String
         if let d = data["questEventCount"] as? Double {
             questEventCount = d
         } else if let i = data["questEventCount"] as? Int {
@@ -66,8 +74,9 @@ struct Quest: Identifiable {
             questEventCount = 0
         }
 
-        guard let units = data["questEventUnits"] as? String else { return nil }
-        questEventUnits = units
+        // questEventUnits fallback to plain key
+        self.questEventUnits = (data["questEventUnits"] as? String) ?? ""
+        if questEventUnits.isEmpty { return nil }
 
         // Overrides
         isRequired = data["isRequired"] as? Bool ?? true
@@ -88,7 +97,7 @@ struct Quest: Identifiable {
             questCooldownOverride = nil
         }
 
-        // The original field in Firestore is "questRepeatDebuff"
+        // questRepeatDebuffOverride
         if let d = data["questRepeatDebuff"] as? Double {
             questRepeatDebuffOverride = d
         } else if let i = data["questRepeatDebuff"] as? Int {
@@ -98,3 +107,4 @@ struct Quest: Identifiable {
         }
     }
 }
+

@@ -9,6 +9,7 @@ import SwiftUI
 
 struct MyQuestsView: View {
     @StateObject private var vm = MyQuestsViewModel()
+    @EnvironmentObject private var authVM: AuthViewModel
     @EnvironmentObject private var themeManager: ThemeManager
 
     // Pager state
@@ -22,12 +23,12 @@ struct MyQuestsView: View {
     }
 
     enum Page: Int, CaseIterable {
-        case daily, expired, active, complete
+        case daily, active, expired, complete
         var title: String {
             switch self {
             case .daily:    return "Daily Quests"
-            case .expired:  return "Expired Quests"
             case .active:   return "All Active Quests"
+            case .expired:  return "Expired Quests"
             case .complete: return "Completed Quests"
             }
         }
@@ -35,7 +36,6 @@ struct MyQuestsView: View {
 
     var body: some View {
         VStack(spacing: themeManager.theme.spacingMedium) {
-            // Page title
             Text(selectedPage.title)
                 .font(themeManager.theme.headingLargeFont)
                 .foregroundColor(themeManager.theme.primaryColor)
@@ -44,7 +44,6 @@ struct MyQuestsView: View {
                 .cornerRadius(themeManager.theme.cornerRadius)
                 .padding(.horizontal, themeManager.theme.paddingMedium)
 
-            // Sort toggle
             HStack {
                 Spacer()
                 Button { ascending.toggle() } label: {
@@ -56,7 +55,6 @@ struct MyQuestsView: View {
             }
             .padding(.horizontal, themeManager.theme.paddingMedium)
 
-            // Paged TabView
             TabView(selection: $selectedPage) {
                 ForEach(Page.allCases, id: \.self) { page in
                     QuestList(
@@ -75,7 +73,6 @@ struct MyQuestsView: View {
             .indexViewStyle(PageIndexViewStyle(backgroundDisplayMode: .always))
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            // Debuff toast
             if showDebuffMessage {
                 Text("Reinitiating Quest. Penalty Debuff Applied")
                     .font(themeManager.theme.bodyMediumFont)
@@ -94,19 +91,54 @@ struct MyQuestsView: View {
         }
     }
 
+    /// Helpers
     private func quests(for page: Page) -> [ActiveQuest] {
         let all = vm.activeQuests
-        let todayInterval = Calendar.current.dateInterval(of: .day, for: now)!
+
         switch page {
         case .daily:
+            // Show quests due within 24h + rest period length
+            let nowDate = now
+            let cal = Calendar.current
+
+            // User's rest period
+            let startHour   = authVM.userProfile?.restStartHour   ?? 22
+            let startMinute = authVM.userProfile?.restStartMinute ?? 0
+            let endHour     = authVM.userProfile?.restEndHour     ?? 6
+            let endMinute   = authVM.userProfile?.restEndMinute   ?? 0
+
+            // Most recent rest start
+            let startComp = DateComponents(hour: startHour, minute: startMinute)
+            let restStart = cal.nextDate(
+                after: nowDate,
+                matching: startComp,
+                matchingPolicy: .nextTime,
+                direction: .backward
+            ) ?? nowDate
+
+            // Next rest end
+            let endComp = DateComponents(hour: endHour, minute: endMinute)
+            let restEnd = cal.nextDate(
+                after: restStart,
+                matching: endComp,
+                matchingPolicy: .nextTime,
+                direction: .forward
+            ) ?? restStart.addingTimeInterval(8*3600)
+
+            let restLength = restEnd.timeIntervalSince(restStart)
+            let cutoff = nowDate.addingTimeInterval(24*3600 + restLength)
+
             return all.filter {
                 $0.progress.status == .available
-                && todayInterval.contains($0.progress.expirationTime ?? .distantPast)
+                && ($0.progress.expirationTime ?? .distantFuture) <= cutoff
             }
+
         case .expired:
             return all.filter { $0.progress.status == .failed }
+
         case .active:
             return all.filter { $0.progress.status == .available }
+
         case .complete:
             return all.filter { $0.progress.status == .completed }
         }
@@ -127,10 +159,7 @@ private struct QuestList: View {
     var body: some View {
         List {
             if quests.isEmpty {
-                // Compute failed count
                 let failedCount = vm.activeQuests.filter { $0.progress.status == .failed }.count
-
-                // Show tappable restart message only for Daily & All Active
                 if (page == .daily || page == .active) && failedCount > 0 {
                     Button(action: { selectedPage = .expired }) {
                         Text("\(failedCount) quests awaiting restart")
@@ -140,7 +169,6 @@ private struct QuestList: View {
                             .frame(maxWidth: .infinity, alignment: .center)
                     }
                 } else {
-                    // Fallback empty message
                     Text(emptyStateMessage)
                         .font(themeManager.theme.bodySmallFont)
                         .italic()
@@ -178,4 +206,3 @@ private struct QuestList: View {
         }
     }
 }
-

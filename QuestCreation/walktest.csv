@@ -1,6 +1,0 @@
-questSystemName,questName,questRank,questPrompt,questAuraGranted,questEventCount,questEventUnits,questRepeatDebuff
-Walk System,Walk,1,Walk to gain stamina,1,1,mile,0.5
-Walk System,Walk,2,Walk to gain stamina,1,1.1,miles,0.5
-Walk System,Walk,3,Walk to gain stamina,1,1.2,miles,0.5
-Walk System,Walk,4,Walk to gain stamina,1,1.3,miles,0.5
-Walk System,Walk,5,Walk to gain stamina,1,1.4,miles,0.5

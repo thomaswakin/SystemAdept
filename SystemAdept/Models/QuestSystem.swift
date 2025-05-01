@@ -18,24 +18,24 @@ struct QuestSystem: Identifiable {
 
     /// Failable initializer from a Firestore snapshot.
     init?(from snapshot: DocumentSnapshot) {
-        guard
-            let data = snapshot.data(),
-            let name = data["name"] as? String,
-            let ttcDict = data["defaultTimeToComplete"] as? [String: Any],
-            let ttcAmt = ttcDict["amount"] as? Double,
-            let ttcUnit = ttcDict["unit"] as? String,
-            let cdDict = data["defaultQuestCooldown"] as? [String: Any],
-            let cdAmt = cdDict["amount"] as? Double,
-            let cdUnit = cdDict["unit"] as? String,
-            let debuff = data["defaultRepeatDebuff"] as? Double
-        else {
-            return nil
-        }
+      guard
+        let data = snapshot.data(),
+        let name      = data["name"] as? String,
+        let ttcDict   = data["defaultTimeToComplete"]   as? [String:Any],
+        let ttcAmt    = ttcDict["amount"] as? Double,
+        let ttcUnit   = ttcDict["unit"]   as? String,
+        let cdDict    = data["defaultQuestCooldown"]   as? [String:Any],
+        let cdAmt     = cdDict["amount"] as? Double,
+        let cdUnit    = cdDict["unit"]   as? String
+      else { return nil }
 
-        self.id = snapshot.documentID
-        self.name = name
-        self.defaultTimeToComplete = TimeIntervalConfig(amount: ttcAmt, unit: ttcUnit)
-        self.defaultQuestCooldown  = TimeIntervalConfig(amount: cdAmt,  unit: cdUnit)
-        self.defaultRepeatDebuff   = debuff
+      // Optional debuff, defaulting to 1.0
+      let debuff = data["defaultRepeatDebuff"] as? Double ?? 1.0
+
+      self.id                     = snapshot.documentID
+      self.name                   = name
+      self.defaultTimeToComplete  = TimeIntervalConfig(amount: ttcAmt, unit: ttcUnit)
+      self.defaultQuestCooldown   = TimeIntervalConfig(amount: cdAmt,  unit: cdUnit)
+      self.defaultRepeatDebuff    = debuff
     }
 }

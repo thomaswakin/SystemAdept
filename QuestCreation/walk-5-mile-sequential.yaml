@@ -1,0 +1,491 @@
+id: walk-5-mile
+shortName: Walk 5Mi Chlg
+description: Walk System
+defaultTimeToComplete:
+  amount: 2
+  unit: days
+defaultQuestCooldown:
+  amount: 0
+  unit: minute
+defaultRepeatDebuff: 0.5
+quests:
+- questId: rank-1-s1
+  rank: 1
+  name: Walk 0.25 Miles - Session 1
+  prompt: Walk 0.25 miles to boost your cardiovascular health
+  isRequired: true
+  questAuraGranted: 2.5
+  questEventCount: 0.25
+  questEventUnits: miles
+- questId: rank-1-s2
+  rank: 2
+  name: Walk 0.25 Miles - Session 2
+  prompt: Take a brisk walk of 0.25 miles to energize your day
+  isRequired: true
+  questAuraGranted: 2.5
+  questEventCount: 0.25
+  questEventUnits: miles
+- questId: rank-1-s3
+  rank: 3
+  name: Walk 0.25 Miles - Session 3
+  prompt: Complete a walk of 0.25 miles to improve your stamina
+  isRequired: true
+  questAuraGranted: 2.5
+  questEventCount: 0.25
+  questEventUnits: miles
+- questId: rank-2-s1
+  rank: 4
+  name: Walk 0.50 Miles - Session 1
+  prompt: Achieve 0.50 miles walking to enhance your endurance
+  isRequired: true
+  questAuraGranted: 5.0
+  questEventCount: 0.5
+  questEventUnits: miles
+- questId: rank-2-s2
+  rank: 5
+  name: Walk 0.50 Miles - Session 2
+  prompt: Embark on a walk of 0.50 miles for overall wellness
+  isRequired: true
+  questAuraGranted: 5.0
+  questEventCount: 0.5
+  questEventUnits: miles
+- questId: rank-2-s3
+  rank: 6
+  name: Walk 0.50 Miles - Session 3
+  prompt: Walk 0.50 miles to boost your cardiovascular health
+  isRequired: true
+  questAuraGranted: 5.0
+  questEventCount: 0.5
+  questEventUnits: miles
+- questId: rank-3-s1
+  rank: 7
+  name: Walk 0.75 Miles - Session 1
+  prompt: Take a brisk walk of 0.75 miles to energize your day
+  isRequired: true
+  questAuraGranted: 7.5
+  questEventCount: 0.75
+  questEventUnits: miles
+- questId: rank-3-s2
+  rank: 8
+  name: Walk 0.75 Miles - Session 2
+  prompt: Complete a walk of 0.75 miles to improve your stamina
+  isRequired: true
+  questAuraGranted: 7.5
+  questEventCount: 0.75
+  questEventUnits: miles
+- questId: rank-3-s3
+  rank: 9
+  name: Walk 0.75 Miles - Session 3
+  prompt: Achieve 0.75 miles walking to enhance your endurance
+  isRequired: true
+  questAuraGranted: 7.5
+  questEventCount: 0.75
+  questEventUnits: miles
+- questId: rank-4-s1
+  rank: 10
+  name: Walk 1.00 Miles - Session 1
+  prompt: Embark on a walk of 1.00 miles for overall wellness
+  isRequired: true
+  questAuraGranted: 10.0
+  questEventCount: 1.0
+  questEventUnits: miles
+- questId: rank-4-s2
+  rank: 11
+  name: Walk 1.00 Miles - Session 2
+  prompt: Walk 1.00 miles to boost your cardiovascular health
+  isRequired: true
+  questAuraGranted: 10.0
+  questEventCount: 1.0
+  questEventUnits: miles
+- questId: rank-4-s3
+  rank: 12
+  name: Walk 1.00 Miles - Session 3
+  prompt: Take a brisk walk of 1.00 miles to energize your day
+  isRequired: true
+  questAuraGranted: 10.0
+  questEventCount: 1.0
+  questEventUnits: miles
+- questId: rank-5-s1
+  rank: 13
+  name: Walk 1.25 Miles - Session 1
+  prompt: Complete a walk of 1.25 miles to improve your stamina
+  isRequired: true
+  questAuraGranted: 12.5
+  questEventCount: 1.25
+  questEventUnits: miles
+- questId: rank-5-s2
+  rank: 14
+  name: Walk 1.25 Miles - Session 2
+  prompt: Achieve 1.25 miles walking to enhance your endurance
+  isRequired: true
+  questAuraGranted: 12.5
+  questEventCount: 1.25
+  questEventUnits: miles
+- questId: rank-5-s3
+  rank: 15
+  name: Walk 1.25 Miles - Session 3
+  prompt: Embark on a walk of 1.25 miles for overall wellness
+  isRequired: true
+  questAuraGranted: 12.5
+  questEventCount: 1.25
+  questEventUnits: miles
+- questId: rank-6-s1
+  rank: 16
+  name: Walk 1.50 Miles - Session 1
+  prompt: Walk 1.50 miles to boost your cardiovascular health
+  isRequired: true
+  questAuraGranted: 15.0
+  questEventCount: 1.5
+  questEventUnits: miles
+- questId: rank-6-s2
+  rank: 17
+  name: Walk 1.50 Miles - Session 2
+  prompt: Take a brisk walk of 1.50 miles to energize your day
+  isRequired: true
+  questAuraGranted: 15.0
+  questEventCount: 1.5
+  questEventUnits: miles
+- questId: rank-6-s3
+  rank: 18
+  name: Walk 1.50 Miles - Session 3
+  prompt: Complete a walk of 1.50 miles to improve your stamina
+  isRequired: true
+  questAuraGranted: 15.0
+  questEventCount: 1.5
+  questEventUnits: miles
+- questId: rank-7-s1
+  rank: 19
+  name: Walk 1.75 Miles - Session 1
+  prompt: Achieve 1.75 miles walking to enhance your endurance
+  isRequired: true
+  questAuraGranted: 17.5
+  questEventCount: 1.75
+  questEventUnits: miles
+- questId: rank-7-s2
+  rank: 20
+  name: Walk 1.75 Miles - Session 2
+  prompt: Embark on a walk of 1.75 miles for overall wellness
+  isRequired: true
+  questAuraGranted: 17.5
+  questEventCount: 1.75
+  questEventUnits: miles
+- questId: rank-7-s3
+  rank: 21
+  name: Walk 1.75 Miles - Session 3
+  prompt: Walk 1.75 miles to boost your cardiovascular health
+  isRequired: true
+  questAuraGranted: 17.5
+  questEventCount: 1.75
+  questEventUnits: miles
+- questId: rank-8-s1
+  rank: 22
+  name: Walk 2.00 Miles - Session 1
+  prompt: Take a brisk walk of 2.00 miles to energize your day
+  isRequired: true
+  questAuraGranted: 20.0
+  questEventCount: 2.0
+  questEventUnits: miles
+- questId: rank-8-s2
+  rank: 23
+  name: Walk 2.00 Miles - Session 2
+  prompt: Complete a walk of 2.00 miles to improve your stamina
+  isRequired: true
+  questAuraGranted: 20.0
+  questEventCount: 2.0
+  questEventUnits: miles
+- questId: rank-8-s3
+  rank: 24
+  name: Walk 2.00 Miles - Session 3
+  prompt: Achieve 2.00 miles walking to enhance your endurance
+  isRequired: true
+  questAuraGranted: 20.0
+  questEventCount: 2.0
+  questEventUnits: miles
+- questId: rank-9-s1
+  rank: 25
+  name: Walk 2.25 Miles - Session 1
+  prompt: Embark on a walk of 2.25 miles for overall wellness
+  isRequired: true
+  questAuraGranted: 22.5
+  questEventCount: 2.25
+  questEventUnits: miles
+- questId: rank-9-s2
+  rank: 26
+  name: Walk 2.25 Miles - Session 2
+  prompt: Walk 2.25 miles to boost your cardiovascular health
+  isRequired: true
+  questAuraGranted: 22.5
+  questEventCount: 2.25
+  questEventUnits: miles
+- questId: rank-9-s3
+  rank: 27
+  name: Walk 2.25 Miles - Session 3
+  prompt: Take a brisk walk of 2.25 miles to energize your day
+  isRequired: true
+  questAuraGranted: 22.5
+  questEventCount: 2.25
+  questEventUnits: miles
+- questId: rank-10-s1
+  rank: 28
+  name: Walk 2.50 Miles - Session 1
+  prompt: Complete a walk of 2.50 miles to improve your stamina
+  isRequired: true
+  questAuraGranted: 25.0
+  questEventCount: 2.5
+  questEventUnits: miles
+- questId: rank-10-s2
+  rank: 29
+  name: Walk 2.50 Miles - Session 2
+  prompt: Achieve 2.50 miles walking to enhance your endurance
+  isRequired: true
+  questAuraGranted: 25.0
+  questEventCount: 2.5
+  questEventUnits: miles
+- questId: rank-10-s3
+  rank: 30
+  name: Walk 2.50 Miles - Session 3
+  prompt: Embark on a walk of 2.50 miles for overall wellness
+  isRequired: true
+  questAuraGranted: 25.0
+  questEventCount: 2.5
+  questEventUnits: miles
+- questId: rank-11-s1
+  rank: 31
+  name: Walk 2.75 Miles - Session 1
+  prompt: Walk 2.75 miles to boost your cardiovascular health
+  isRequired: true
+  questAuraGranted: 27.5
+  questEventCount: 2.75
+  questEventUnits: miles
+- questId: rank-11-s2
+  rank: 32
+  name: Walk 2.75 Miles - Session 2
+  prompt: Take a brisk walk of 2.75 miles to energize your day
+  isRequired: true
+  questAuraGranted: 27.5
+  questEventCount: 2.75
+  questEventUnits: miles
+- questId: rank-11-s3
+  rank: 33
+  name: Walk 2.75 Miles - Session 3
+  prompt: Complete a walk of 2.75 miles to improve your stamina
+  isRequired: true
+  questAuraGranted: 27.5
+  questEventCount: 2.75
+  questEventUnits: miles
+- questId: rank-12-s1
+  rank: 34
+  name: Walk 3.00 Miles - Session 1
+  prompt: Achieve 3.00 miles walking to enhance your endurance
+  isRequired: true
+  questAuraGranted: 30.0
+  questEventCount: 3.0
+  questEventUnits: miles
+- questId: rank-12-s2
+  rank: 35
+  name: Walk 3.00 Miles - Session 2
+  prompt: Embark on a walk of 3.00 miles for overall wellness
+  isRequired: true
+  questAuraGranted: 30.0
+  questEventCount: 3.0
+  questEventUnits: miles
+- questId: rank-12-s3
+  rank: 36
+  name: Walk 3.00 Miles - Session 3
+  prompt: Walk 3.00 miles to boost your cardiovascular health
+  isRequired: true
+  questAuraGranted: 30.0
+  questEventCount: 3.0
+  questEventUnits: miles
+- questId: rank-13-s1
+  rank: 37
+  name: Walk 3.25 Miles - Session 1
+  prompt: Take a brisk walk of 3.25 miles to energize your day
+  isRequired: true
+  questAuraGranted: 32.5
+  questEventCount: 3.25
+  questEventUnits: miles
+- questId: rank-13-s2
+  rank: 38
+  name: Walk 3.25 Miles - Session 2
+  prompt: Complete a walk of 3.25 miles to improve your stamina
+  isRequired: true
+  questAuraGranted: 32.5
+  questEventCount: 3.25
+  questEventUnits: miles
+- questId: rank-13-s3
+  rank: 39
+  name: Walk 3.25 Miles - Session 3
+  prompt: Achieve 3.25 miles walking to enhance your endurance
+  isRequired: true
+  questAuraGranted: 32.5
+  questEventCount: 3.25
+  questEventUnits: miles
+- questId: rank-14-s1
+  rank: 40
+  name: Walk 3.50 Miles - Session 1
+  prompt: Embark on a walk of 3.50 miles for overall wellness
+  isRequired: true
+  questAuraGranted: 35.0
+  questEventCount: 3.5
+  questEventUnits: miles
+- questId: rank-14-s2
+  rank: 41
+  name: Walk 3.50 Miles - Session 2
+  prompt: Walk 3.50 miles to boost your cardiovascular health
+  isRequired: true
+  questAuraGranted: 35.0
+  questEventCount: 3.5
+  questEventUnits: miles
+- questId: rank-14-s3
+  rank: 42
+  name: Walk 3.50 Miles - Session 3
+  prompt: Take a brisk walk of 3.50 miles to energize your day
+  isRequired: true
+  questAuraGranted: 35.0
+  questEventCount: 3.5
+  questEventUnits: miles
+- questId: rank-15-s1
+  rank: 43
+  name: Walk 3.75 Miles - Session 1
+  prompt: Complete a walk of 3.75 miles to improve your stamina
+  isRequired: true
+  questAuraGranted: 37.5
+  questEventCount: 3.75
+  questEventUnits: miles
+- questId: rank-15-s2
+  rank: 44
+  name: Walk 3.75 Miles - Session 2
+  prompt: Achieve 3.75 miles walking to enhance your endurance
+  isRequired: true
+  questAuraGranted: 37.5
+  questEventCount: 3.75
+  questEventUnits: miles
+- questId: rank-15-s3
+  rank: 45
+  name: Walk 3.75 Miles - Session 3
+  prompt: Embark on a walk of 3.75 miles for overall wellness
+  isRequired: true
+  questAuraGranted: 37.5
+  questEventCount: 3.75
+  questEventUnits: miles
+- questId: rank-16-s1
+  rank: 46
+  name: Walk 4.00 Miles - Session 1
+  prompt: Walk 4.00 miles to boost your cardiovascular health
+  isRequired: true
+  questAuraGranted: 40.0
+  questEventCount: 4.0
+  questEventUnits: miles
+- questId: rank-16-s2
+  rank: 47
+  name: Walk 4.00 Miles - Session 2
+  prompt: Take a brisk walk of 4.00 miles to energize your day
+  isRequired: true
+  questAuraGranted: 40.0
+  questEventCount: 4.0
+  questEventUnits: miles
+- questId: rank-16-s3
+  rank: 48
+  name: Walk 4.00 Miles - Session 3
+  prompt: Complete a walk of 4.00 miles to improve your stamina
+  isRequired: true
+  questAuraGranted: 40.0
+  questEventCount: 4.0
+  questEventUnits: miles
+- questId: rank-17-s1
+  rank: 49
+  name: Walk 4.25 Miles - Session 1
+  prompt: Achieve 4.25 miles walking to enhance your endurance
+  isRequired: true
+  questAuraGranted: 42.5
+  questEventCount: 4.25
+  questEventUnits: miles
+- questId: rank-17-s2
+  rank: 50
+  name: Walk 4.25 Miles - Session 2
+  prompt: Embark on a walk of 4.25 miles for overall wellness
+  isRequired: true
+  questAuraGranted: 42.5
+  questEventCount: 4.25
+  questEventUnits: miles
+- questId: rank-17-s3
+  rank: 51
+  name: Walk 4.25 Miles - Session 3
+  prompt: Walk 4.25 miles to boost your cardiovascular health
+  isRequired: true
+  questAuraGranted: 42.5
+  questEventCount: 4.25
+  questEventUnits: miles
+- questId: rank-18-s1
+  rank: 52
+  name: Walk 4.50 Miles - Session 1
+  prompt: Take a brisk walk of 4.50 miles to energize your day
+  isRequired: true
+  questAuraGranted: 45.0
+  questEventCount: 4.5
+  questEventUnits: miles
+- questId: rank-18-s2
+  rank: 53
+  name: Walk 4.50 Miles - Session 2
+  prompt: Complete a walk of 4.50 miles to improve your stamina
+  isRequired: true
+  questAuraGranted: 45.0
+  questEventCount: 4.5
+  questEventUnits: miles
+- questId: rank-18-s3
+  rank: 54
+  name: Walk 4.50 Miles - Session 3
+  prompt: Achieve 4.50 miles walking to enhance your endurance
+  isRequired: true
+  questAuraGranted: 45.0
+  questEventCount: 4.5
+  questEventUnits: miles
+- questId: rank-19-s1
+  rank: 55
+  name: Walk 4.75 Miles - Session 1
+  prompt: Embark on a walk of 4.75 miles for overall wellness
+  isRequired: true
+  questAuraGranted: 47.5
+  questEventCount: 4.75
+  questEventUnits: miles
+- questId: rank-19-s2
+  rank: 56
+  name: Walk 4.75 Miles - Session 2
+  prompt: Walk 4.75 miles to boost your cardiovascular health
+  isRequired: true
+  questAuraGranted: 47.5
+  questEventCount: 4.75
+  questEventUnits: miles
+- questId: rank-19-s3
+  rank: 57
+  name: Walk 4.75 Miles - Session 3
+  prompt: Take a brisk walk of 4.75 miles to energize your day
+  isRequired: true
+  questAuraGranted: 47.5
+  questEventCount: 4.75
+  questEventUnits: miles
+- questId: rank-20-s1
+  rank: 58
+  name: Walk 5.00 Miles - Session 1
+  prompt: Complete a walk of 5.00 miles to improve your stamina
+  isRequired: true
+  questAuraGranted: 50.0
+  questEventCount: 5.0
+  questEventUnits: miles
+- questId: rank-20-s2
+  rank: 59
+  name: Walk 5.00 Miles - Session 2
+  prompt: Achieve 5.00 miles walking to enhance your endurance
+  isRequired: true
+  questAuraGranted: 50.0
+  questEventCount: 5.0
+  questEventUnits: miles
+- questId: rank-20-s3
+  rank: 60
+  name: Walk 5.00 Miles - Session 3
+  prompt: Embark on a walk of 5.00 miles for overall wellness
+  isRequired: true
+  questAuraGranted: 50.0
+  questEventCount: 5.0
+  questEventUnits: miles

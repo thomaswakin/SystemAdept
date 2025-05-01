@@ -1,0 +1,153 @@
+id: pushup-8-week-3x
+name: "8-Week Push-Up Progression (3×/week)"
+defaultTimeToComplete:
+  amount: 1
+  unit: minute
+defaultQuestCooldown:
+  amount: 0
+  unit: minute
+
+quests:
+  - questId: "rank-1"
+    rank: 1
+    name: "Session 1: 5 Push-Ups"
+    prompt: "Perform 5 push-ups in one set."
+    isRequired: true
+
+  - questId: "rank-2"
+    rank: 2
+    name: "Session 2: 7 Push-Ups"
+    prompt: "Perform 7 push-ups in one set."
+    isRequired: true
+
+  - questId: "rank-3"
+    rank: 3
+    name: "Session 3: 9 Push-Ups"
+    prompt: "Perform 9 push-ups in one set."
+    isRequired: true
+
+  - questId: "rank-4"
+    rank: 4
+    name: "Session 4: 11 Push-Ups"
+    prompt: "Perform 11 push-ups in one set."
+    isRequired: true
+
+  - questId: "rank-5"
+    rank: 5
+    name: "Session 5: 13 Push-Ups"
+    prompt: "Perform 13 push-ups in one set."
+    isRequired: true
+
+  - questId: "rank-6"
+    rank: 6
+    name: "Session 6: 15 Push-Ups"
+    prompt: "Perform 15 push-ups in one set."
+    isRequired: true
+
+  - questId: "rank-7"
+    rank: 7
+    name: "Session 7: 17 Push-Ups"
+    prompt: "Perform 17 push-ups in one set."
+    isRequired: true
+
+  - questId: "rank-8"
+    rank: 8
+    name: "Session 8: 19 Push-Ups"
+    prompt: "Perform 19 push-ups in one set."
+    isRequired: true
+
+  - questId: "rank-9"
+    rank: 9
+    name: "Session 9: 21 Push-Ups"
+    prompt: "Perform 21 push-ups in one set."
+    isRequired: true
+
+  - questId: "rank-10"
+    rank: 10
+    name: "Session 10: 23 Push-Ups"
+    prompt: "Perform 23 push-ups in one set."
+    isRequired: true
+
+  - questId: "rank-11"
+    rank: 11
+    name: "Session 11: 25 Push-Ups"
+    prompt: "Perform 25 push-ups in one set."
+    isRequired: true
+
+  - questId: "rank-12"
+    rank: 12
+    name: "Session 12: 27 Push-Ups"
+    prompt: "Perform 27 push-ups in one set."
+    isRequired: true
+
+  - questId: "rank-13"
+    rank: 13
+    name: "Session 13: 29 Push-Ups"
+    prompt: "Perform 29 push-ups in one set."
+    isRequired: true
+
+  - questId: "rank-14"
+    rank: 14
+    name: "Session 14: 31 Push-Ups"
+    prompt: "Perform 31 push-ups in one set."
+    isRequired: true
+
+  - questId: "rank-15"
+    rank: 15
+    name: "Session 15: 33 Push-Ups"
+    prompt: "Perform 33 push-ups in one set."
+    isRequired: true
+
+  - questId: "rank-16"
+    rank: 16
+    name: "Session 16: 35 Push-Ups"
+    prompt: "Perform 35 push-ups in one set."
+    isRequired: true
+
+  - questId: "rank-17"
+    rank: 17
+    name: "Session 17: 37 Push-Ups"
+    prompt: "Perform 37 push-ups in one set."
+    isRequired: true
+
+  - questId: "rank-18"
+    rank: 18
+    name: "Session 18: 39 Push-Ups"
+    prompt: "Perform 39 push-ups in one set."
+    isRequired: true
+
+  - questId: "rank-19"
+    rank: 19
+    name: "Session 19: 41 Push-Ups"
+    prompt: "Perform 41 push-ups in one set."
+    isRequired: true
+
+  - questId: "rank-20"
+    rank: 20
+    name: "Session 20: 43 Push-Ups"
+    prompt: "Perform 43 push-ups in one set."
+    isRequired: true
+
+  - questId: "rank-21"
+    rank: 21
+    name: "Session 21: 45 Push-Ups"
+    prompt: "Perform 45 push-ups in one set."
+    isRequired: true
+
+  - questId: "rank-22"
+    rank: 22
+    name: "Session 22: 47 Push-Ups"
+    prompt: "Perform 47 push-ups in one set."
+    isRequired: true
+
+  - questId: "rank-23"
+    rank: 23
+    name: "Session 23: 49 Push-Ups"
+    prompt: "Perform 49 push-ups in one set."
+    isRequired: true
+
+  - questId: "rank-24"
+    rank: 24
+    name: "Session 24: 50 Push-Ups"
+    prompt: "Perform 50 push-ups in one set."
+    isRequired: true

@@ -1,0 +1,771 @@
+id: mind-your-day-15-30-3mo
+shortName: Mind Your Day
+description: An easy journey toward daily meditation
+defaultTimeToComplete:
+  amount: 1
+  unit: days
+defaultQuestCooldown:
+  amount: 0
+  unit: minute
+defaultRepeatDebuff: 0.5
+quests:
+- questId: build-session-1
+  rank: 1
+  name: 'Session 1: 5 Minute Sit'
+  prompt: Meditate for 5 minutes.
+  isRequired: true
+  questAuraGranted: 1.0
+  questEventCount: 5.0
+  questEventUnits: minute
+- questId: build-session-2
+  rank: 2
+  name: 'Session 2: 6 Minute Sit'
+  prompt: Meditate for 6 minutes.
+  isRequired: true
+  questAuraGranted: 2.0
+  questEventCount: 6.0
+  questEventUnits: minute
+- questId: build-session-3
+  rank: 3
+  name: 'Session 3: 7 Minute Sit'
+  prompt: Meditate for 7 minutes.
+  isRequired: true
+  questAuraGranted: 3.0
+  questEventCount: 7.0
+  questEventUnits: minute
+- questId: build-session-4
+  rank: 4
+  name: 'Session 4: 8 Minute Sit'
+  prompt: Meditate for 8 minutes.
+  isRequired: true
+  questAuraGranted: 4.0
+  questEventCount: 8.0
+  questEventUnits: minute
+- questId: build-session-5
+  rank: 5
+  name: 'Session 5: 9 Minute Sit'
+  prompt: Meditate for 9 minutes.
+  isRequired: true
+  questAuraGranted: 5.0
+  questEventCount: 9.0
+  questEventUnits: minute
+- questId: build-session-6
+  rank: 6
+  name: 'Session 6: 10 Minute Sit'
+  prompt: Meditate for 10 minutes.
+  isRequired: true
+  questAuraGranted: 6.0
+  questEventCount: 10.0
+  questEventUnits: minute
+- questId: build-session-7
+  rank: 7
+  name: 'Session 7: 11 Minute Sit'
+  prompt: Meditate for 11 minutes.
+  isRequired: true
+  questAuraGranted: 7.0
+  questEventCount: 11.0
+  questEventUnits: minute
+- questId: build-session-8
+  rank: 8
+  name: 'Session 8: 12 Minute Sit'
+  prompt: Meditate for 12 minutes.
+  isRequired: true
+  questAuraGranted: 8.0
+  questEventCount: 12.0
+  questEventUnits: minute
+- questId: build-session-9
+  rank: 9
+  name: 'Session 9: 13 Minute Sit'
+  prompt: Meditate for 13 minutes.
+  isRequired: true
+  questAuraGranted: 9.0
+  questEventCount: 13.0
+  questEventUnits: minute
+- questId: build-session-10
+  rank: 10
+  name: 'Session 10: 14 Minute Sit'
+  prompt: Meditate for 14 minutes.
+  isRequired: true
+  questAuraGranted: 10.0
+  questEventCount: 14.0
+  questEventUnits: minute
+- questId: build-session-11
+  rank: 11
+  name: 'Session 11: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 11.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-1-session-1
+  rank: 12
+  name: 'Week 1 Session 1: 30 Minute Sit'
+  prompt: Meditate for 30 minutes.
+  isRequired: true
+  questAuraGranted: 12.0
+  questEventCount: 30.0
+  questEventUnits: minute
+- questId: maintain-week-1-session-2
+  rank: 13
+  name: 'Week 1 Session 2: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 13.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-1-session-3
+  rank: 14
+  name: 'Week 1 Session 3: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 14.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-1-session-4
+  rank: 15
+  name: 'Week 1 Session 4: 30 Minute Sit'
+  prompt: Meditate for 30 minutes.
+  isRequired: true
+  questAuraGranted: 15.0
+  questEventCount: 30.0
+  questEventUnits: minute
+- questId: maintain-week-1-session-5
+  rank: 16
+  name: 'Week 1 Session 5: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 16.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-1-session-6
+  rank: 17
+  name: 'Week 1 Session 6: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 17.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-1-session-7
+  rank: 18
+  name: 'Week 1 Session 7: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 18.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-2-session-1
+  rank: 19
+  name: 'Week 2 Session 1: 30 Minute Sit'
+  prompt: Meditate for 30 minutes.
+  isRequired: true
+  questAuraGranted: 19.0
+  questEventCount: 30.0
+  questEventUnits: minute
+- questId: maintain-week-2-session-2
+  rank: 20
+  name: 'Week 2 Session 2: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 20.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-2-session-3
+  rank: 21
+  name: 'Week 2 Session 3: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 21.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-2-session-4
+  rank: 22
+  name: 'Week 2 Session 4: 30 Minute Sit'
+  prompt: Meditate for 30 minutes.
+  isRequired: true
+  questAuraGranted: 22.0
+  questEventCount: 30.0
+  questEventUnits: minute
+- questId: maintain-week-2-session-5
+  rank: 23
+  name: 'Week 2 Session 5: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 23.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-2-session-6
+  rank: 24
+  name: 'Week 2 Session 6: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 24.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-2-session-7
+  rank: 25
+  name: 'Week 2 Session 7: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 25.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-3-session-1
+  rank: 26
+  name: 'Week 3 Session 1: 30 Minute Sit'
+  prompt: Meditate for 30 minutes.
+  isRequired: true
+  questAuraGranted: 26.0
+  questEventCount: 30.0
+  questEventUnits: minute
+- questId: maintain-week-3-session-2
+  rank: 27
+  name: 'Week 3 Session 2: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 27.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-3-session-3
+  rank: 28
+  name: 'Week 3 Session 3: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 28.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-3-session-4
+  rank: 29
+  name: 'Week 3 Session 4: 30 Minute Sit'
+  prompt: Meditate for 30 minutes.
+  isRequired: true
+  questAuraGranted: 29.0
+  questEventCount: 30.0
+  questEventUnits: minute
+- questId: maintain-week-3-session-5
+  rank: 30
+  name: 'Week 3 Session 5: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 30.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-3-session-6
+  rank: 31
+  name: 'Week 3 Session 6: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 31.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-3-session-7
+  rank: 32
+  name: 'Week 3 Session 7: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 32.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-4-session-1
+  rank: 33
+  name: 'Week 4 Session 1: 30 Minute Sit'
+  prompt: Meditate for 30 minutes.
+  isRequired: true
+  questAuraGranted: 33.0
+  questEventCount: 30.0
+  questEventUnits: minute
+- questId: maintain-week-4-session-2
+  rank: 34
+  name: 'Week 4 Session 2: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 34.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-4-session-3
+  rank: 35
+  name: 'Week 4 Session 3: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 35.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-4-session-4
+  rank: 36
+  name: 'Week 4 Session 4: 30 Minute Sit'
+  prompt: Meditate for 30 minutes.
+  isRequired: true
+  questAuraGranted: 36.0
+  questEventCount: 30.0
+  questEventUnits: minute
+- questId: maintain-week-4-session-5
+  rank: 37
+  name: 'Week 4 Session 5: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 37.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-4-session-6
+  rank: 38
+  name: 'Week 4 Session 6: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 38.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-4-session-7
+  rank: 39
+  name: 'Week 4 Session 7: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 39.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-5-session-1
+  rank: 40
+  name: 'Week 5 Session 1: 30 Minute Sit'
+  prompt: Meditate for 30 minutes.
+  isRequired: true
+  questAuraGranted: 40.0
+  questEventCount: 30.0
+  questEventUnits: minute
+- questId: maintain-week-5-session-2
+  rank: 41
+  name: 'Week 5 Session 2: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 41.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-5-session-3
+  rank: 42
+  name: 'Week 5 Session 3: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 42.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-5-session-4
+  rank: 43
+  name: 'Week 5 Session 4: 30 Minute Sit'
+  prompt: Meditate for 30 minutes.
+  isRequired: true
+  questAuraGranted: 43.0
+  questEventCount: 30.0
+  questEventUnits: minute
+- questId: maintain-week-5-session-5
+  rank: 44
+  name: 'Week 5 Session 5: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 44.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-5-session-6
+  rank: 45
+  name: 'Week 5 Session 6: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 45.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-5-session-7
+  rank: 46
+  name: 'Week 5 Session 7: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 46.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-6-session-1
+  rank: 47
+  name: 'Week 6 Session 1: 30 Minute Sit'
+  prompt: Meditate for 30 minutes.
+  isRequired: true
+  questAuraGranted: 47.0
+  questEventCount: 30.0
+  questEventUnits: minute
+- questId: maintain-week-6-session-2
+  rank: 48
+  name: 'Week 6 Session 2: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 48.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-6-session-3
+  rank: 49
+  name: 'Week 6 Session 3: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 49.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-6-session-4
+  rank: 50
+  name: 'Week 6 Session 4: 30 Minute Sit'
+  prompt: Meditate for 30 minutes.
+  isRequired: true
+  questAuraGranted: 50.0
+  questEventCount: 30.0
+  questEventUnits: minute
+- questId: maintain-week-6-session-5
+  rank: 51
+  name: 'Week 6 Session 5: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 51.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-6-session-6
+  rank: 52
+  name: 'Week 6 Session 6: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 52.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-6-session-7
+  rank: 53
+  name: 'Week 6 Session 7: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 53.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-7-session-1
+  rank: 54
+  name: 'Week 7 Session 1: 30 Minute Sit'
+  prompt: Meditate for 30 minutes.
+  isRequired: true
+  questAuraGranted: 54.0
+  questEventCount: 30.0
+  questEventUnits: minute
+- questId: maintain-week-7-session-2
+  rank: 55
+  name: 'Week 7 Session 2: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 55.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-7-session-3
+  rank: 56
+  name: 'Week 7 Session 3: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 56.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-7-session-4
+  rank: 57
+  name: 'Week 7 Session 4: 30 Minute Sit'
+  prompt: Meditate for 30 minutes.
+  isRequired: true
+  questAuraGranted: 57.0
+  questEventCount: 30.0
+  questEventUnits: minute
+- questId: maintain-week-7-session-5
+  rank: 58
+  name: 'Week 7 Session 5: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 58.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-7-session-6
+  rank: 59
+  name: 'Week 7 Session 6: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 59.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-7-session-7
+  rank: 60
+  name: 'Week 7 Session 7: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 60.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-8-session-1
+  rank: 61
+  name: 'Week 8 Session 1: 30 Minute Sit'
+  prompt: Meditate for 30 minutes.
+  isRequired: true
+  questAuraGranted: 61.0
+  questEventCount: 30.0
+  questEventUnits: minute
+- questId: maintain-week-8-session-2
+  rank: 62
+  name: 'Week 8 Session 2: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 62.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-8-session-3
+  rank: 63
+  name: 'Week 8 Session 3: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 63.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-8-session-4
+  rank: 64
+  name: 'Week 8 Session 4: 30 Minute Sit'
+  prompt: Meditate for 30 minutes.
+  isRequired: true
+  questAuraGranted: 64.0
+  questEventCount: 30.0
+  questEventUnits: minute
+- questId: maintain-week-8-session-5
+  rank: 65
+  name: 'Week 8 Session 5: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 65.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-8-session-6
+  rank: 66
+  name: 'Week 8 Session 6: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 66.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-8-session-7
+  rank: 67
+  name: 'Week 8 Session 7: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 67.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-9-session-1
+  rank: 68
+  name: 'Week 9 Session 1: 30 Minute Sit'
+  prompt: Meditate for 30 minutes.
+  isRequired: true
+  questAuraGranted: 68.0
+  questEventCount: 30.0
+  questEventUnits: minute
+- questId: maintain-week-9-session-2
+  rank: 69
+  name: 'Week 9 Session 2: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 69.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-9-session-3
+  rank: 70
+  name: 'Week 9 Session 3: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 70.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-9-session-4
+  rank: 71
+  name: 'Week 9 Session 4: 30 Minute Sit'
+  prompt: Meditate for 30 minutes.
+  isRequired: true
+  questAuraGranted: 71.0
+  questEventCount: 30.0
+  questEventUnits: minute
+- questId: maintain-week-9-session-5
+  rank: 72
+  name: 'Week 9 Session 5: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 72.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-9-session-6
+  rank: 73
+  name: 'Week 9 Session 6: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 73.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-9-session-7
+  rank: 74
+  name: 'Week 9 Session 7: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 74.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-10-session-1
+  rank: 75
+  name: 'Week 10 Session 1: 30 Minute Sit'
+  prompt: Meditate for 30 minutes.
+  isRequired: true
+  questAuraGranted: 75.0
+  questEventCount: 30.0
+  questEventUnits: minute
+- questId: maintain-week-10-session-2
+  rank: 76
+  name: 'Week 10 Session 2: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 76.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-10-session-3
+  rank: 77
+  name: 'Week 10 Session 3: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 77.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-10-session-4
+  rank: 78
+  name: 'Week 10 Session 4: 30 Minute Sit'
+  prompt: Meditate for 30 minutes.
+  isRequired: true
+  questAuraGranted: 78.0
+  questEventCount: 30.0
+  questEventUnits: minute
+- questId: maintain-week-10-session-5
+  rank: 79
+  name: 'Week 10 Session 5: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 79.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-10-session-6
+  rank: 80
+  name: 'Week 10 Session 6: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 80.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-10-session-7
+  rank: 81
+  name: 'Week 10 Session 7: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 81.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-11-session-1
+  rank: 82
+  name: 'Week 11 Session 1: 30 Minute Sit'
+  prompt: Meditate for 30 minutes.
+  isRequired: true
+  questAuraGranted: 82.0
+  questEventCount: 30.0
+  questEventUnits: minute
+- questId: maintain-week-11-session-2
+  rank: 83
+  name: 'Week 11 Session 2: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 83.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-11-session-3
+  rank: 84
+  name: 'Week 11 Session 3: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 84.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-11-session-4
+  rank: 85
+  name: 'Week 11 Session 4: 30 Minute Sit'
+  prompt: Meditate for 30 minutes.
+  isRequired: true
+  questAuraGranted: 85.0
+  questEventCount: 30.0
+  questEventUnits: minute
+- questId: maintain-week-11-session-5
+  rank: 86
+  name: 'Week 11 Session 5: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 86.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-11-session-6
+  rank: 87
+  name: 'Week 11 Session 6: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 87.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-11-session-7
+  rank: 88
+  name: 'Week 11 Session 7: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 88.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-12-session-1
+  rank: 89
+  name: 'Week 12 Session 1: 30 Minute Sit'
+  prompt: Meditate for 30 minutes.
+  isRequired: true
+  questAuraGranted: 89.0
+  questEventCount: 30.0
+  questEventUnits: minute
+- questId: maintain-week-12-session-2
+  rank: 90
+  name: 'Week 12 Session 2: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 90.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-12-session-3
+  rank: 91
+  name: 'Week 12 Session 3: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 91.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-12-session-4
+  rank: 92
+  name: 'Week 12 Session 4: 30 Minute Sit'
+  prompt: Meditate for 30 minutes.
+  isRequired: true
+  questAuraGranted: 92.0
+  questEventCount: 30.0
+  questEventUnits: minute
+- questId: maintain-week-12-session-5
+  rank: 93
+  name: 'Week 12 Session 5: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 93.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-12-session-6
+  rank: 94
+  name: 'Week 12 Session 6: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 94.0
+  questEventCount: 15.0
+  questEventUnits: minute
+- questId: maintain-week-12-session-7
+  rank: 95
+  name: 'Week 12 Session 7: 15 Minute Sit'
+  prompt: Meditate for 15 minutes.
+  isRequired: true
+  questAuraGranted: 95.0
+  questEventCount: 15.0
+  questEventUnits: minute
